@@ -258,7 +258,7 @@ class AdminService {
           COUNT(*) as total_calls,
           COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_calls,
           COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_calls,
-          AVG(CASE WHEN status = 'completed' THEN duration_minutes END) as avg_duration
+          AVG(CASE WHEN status = 'completed' THEN duration_seconds END) / 60.0 as avg_duration
         FROM calls
         WHERE created_at >= NOW() - INTERVAL '${interval}'
       `;
@@ -271,7 +271,7 @@ class AdminService {
           u.email as user_email,
           COUNT(c.id) as call_count,
           COUNT(CASE WHEN c.status = 'completed' THEN 1 END)::float / NULLIF(COUNT(c.id), 0) as success_rate,
-          AVG(CASE WHEN c.status = 'completed' THEN c.duration_minutes END) as avg_duration
+          AVG(CASE WHEN c.status = 'completed' THEN c.duration_seconds END) / 60.0 as avg_duration
         FROM agents a
         JOIN users u ON a.user_id = u.id
         LEFT JOIN calls c ON a.id = c.agent_id AND c.created_at >= NOW() - INTERVAL '${interval}'

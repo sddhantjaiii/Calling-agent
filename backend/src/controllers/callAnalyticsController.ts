@@ -30,7 +30,7 @@ export class CallAnalyticsController {
             THEN (COUNT(CASE WHEN c.status = 'completed' THEN 1 END) * 100.0 / COUNT(c.id))
             ELSE 0 
           END as connection_rate,
-          COALESCE(AVG(CASE WHEN c.status = 'completed' THEN c.duration_minutes END), 0) as avg_call_duration,
+          COALESCE(AVG(CASE WHEN c.status = 'completed' THEN c.duration_seconds END), 0) / 60.0 as avg_call_duration,
           COUNT(CASE WHEN la.total_score >= 60 THEN 1 END) as leads_converted,
           CASE 
             WHEN COUNT(c.id) > 0 
@@ -465,7 +465,7 @@ export class CallAnalyticsController {
           call_source,
           COUNT(*) as call_count,
           COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_calls,
-          ROUND(AVG(duration_minutes), 2) as avg_duration,
+          ROUND(AVG(duration_seconds) / 60.0, 2) as avg_duration,
           COUNT(CASE WHEN la.total_score >= 60 THEN 1 END) as leads_generated,
           CASE 
             WHEN COUNT(*) > 0 
@@ -570,7 +570,7 @@ export class CallAnalyticsController {
           COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_calls,
           COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_calls,
           COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_calls,
-          ROUND(AVG(CASE WHEN status = 'completed' THEN duration_minutes END), 2) as avg_duration,
+          ROUND(AVG(CASE WHEN status = 'completed' THEN duration_seconds END) / 60.0, 2) as avg_duration,
           SUM(credits_used) as total_credits_used,
           COUNT(CASE WHEN la.total_score >= 60 THEN 1 END) as leads_generated,
           COUNT(CASE WHEN la.total_score >= 80 THEN 1 END) as hot_leads,

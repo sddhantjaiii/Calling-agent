@@ -334,7 +334,7 @@ export class CallModel extends BaseModel<CallInterface> {
         COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_calls,
         COALESCE(SUM(duration_minutes), 0) as total_minutes,
         COALESCE(SUM(credits_used), 0) as total_credits_used,
-        COALESCE(AVG(CASE WHEN status = 'completed' THEN duration_minutes END), 0) as avg_duration
+        COALESCE(AVG(CASE WHEN status = 'completed' THEN duration_seconds END), 0) / 60.0 as avg_duration
       FROM calls
       WHERE user_id = $1 ${dateFilter}
     `;

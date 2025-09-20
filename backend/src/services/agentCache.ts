@@ -373,7 +373,7 @@ export class AgentCacheService {
         SELECT 
           COUNT(*) as total_calls,
           COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_calls,
-          COALESCE(AVG(duration_minutes), 0) as avg_duration,
+          COALESCE(AVG(duration_seconds), 0) / 60.0 as avg_duration,
           COALESCE(SUM(credits_used), 0) as total_credits_used,
           MIN(created_at) as first_call_at,
           MAX(created_at) as last_call_at
@@ -883,7 +883,7 @@ export class AgentCacheService {
           agent_id,
           COUNT(*) as total_calls,
           COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_calls,
-          COALESCE(AVG(duration_minutes), 0) as avg_duration,
+          COALESCE(AVG(duration_seconds), 0) / 60.0 as avg_duration,
           COALESCE(SUM(credits_used), 0) as total_credits_used
         FROM calls 
         WHERE agent_id = ANY($1) AND user_id = $2
@@ -992,7 +992,7 @@ export class AgentCacheService {
           agent_id,
           COUNT(*) as total_calls,
           COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_calls,
-          COALESCE(AVG(duration_minutes), 0) as avg_duration,
+          COALESCE(AVG(duration_seconds), 0) / 60.0 as avg_duration,
           COALESCE(SUM(credits_used), 0) as total_credits_used
         FROM calls 
         WHERE agent_id = ANY($1) AND user_id = $2
