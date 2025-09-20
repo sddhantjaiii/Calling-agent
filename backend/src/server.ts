@@ -27,6 +27,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
 
+// Parse multiple frontend URLs from environment variable
+const FRONTEND_URLS = process.env.FRONTEND_URL 
+  ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+  : ['http://localhost:8080'];
+
 // Setup global error handlers
 setupGlobalErrorHandlers();
 
@@ -67,18 +72,35 @@ app.use(cors({
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
+    // Parse allowed origins from environment variables
+    const corsOrigins = process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
+      : [];
+    
     const allowedOrigins = [
-      FRONTEND_URL,
+      ...FRONTEND_URLS,
+      ...corsOrigins,
       'http://localhost:8080',
+      'http://localhost:8081',
+      'http://localhost:8082', 
+      'http://localhost:5173',
       'http://localhost:3000',
       'http://127.0.0.1:8080',
+      'http://127.0.0.1:8081',
+      'http://127.0.0.1:8082',
+      'http://127.0.0.1:5173',
       'http://127.0.0.1:3000'
     ];
 
-    if (allowedOrigins.includes(origin)) {
+    // Remove duplicates from allowed origins
+    const uniqueAllowedOrigins = [...new Set(allowedOrigins)];
+    
+    if (uniqueAllowedOrigins.includes(origin)) {
+      console.log(`✅ CORS allowed origin: ${origin}`);
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      console.warn(`❌ CORS blocked origin: ${origin}`);
+      console.log(`📝 Allowed origins: ${uniqueAllowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -243,6 +265,14 @@ async function startServer() {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📱 Frontend URL: ${FRONTEND_URL}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔒 CORS Origins: ${[...new Set([
+      ...FRONTEND_URLS,
+      ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(url => url.trim()) : []),
+      'http://localhost:8080',
+      'http://localhost:8081', 
+      'http://localhost:8082',
+      'http://localhost:5173'
+    ])].join(', ')}`);
 
     // Start scheduled tasks
     try {
