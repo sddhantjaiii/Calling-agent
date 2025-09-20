@@ -1,0 +1,82 @@
+{
+  "version": "1.0.0",
+  "buildInfo": {
+    "buildDate": "2024-12-19",
+    "version": "1.0.0",
+    "environment": "production"
+  },
+  "featureFlags": {
+    "admin-panel-enabled": true,
+    "admin-user-management": true,
+    "admin-agent-monitoring": true,
+    "admin-system-analytics": true,
+    "admin-configuration": true,
+    "admin-audit-logs": true,
+    "admin-advanced-features": true,
+    "admin-real-time-updates": true,
+    "admin-data-export": true,
+    "admin-help-system": true,
+    "admin-security-enhancements": true
+  },
+  "rolloutConfig": {
+    "gradualRollout": {
+      "enabled": true,
+      "percentage": 100,
+      "userGroups": ["admin", "super_admin"]
+    },
+    "canaryDeployment": {
+      "enabled": false,
+      "percentage": 10,
+      "duration": "24h"
+    }
+  },
+  "monitoring": {
+    "analytics": {
+      "enabled": true,
+      "trackPageViews": true,
+      "trackUserActions": true,
+      "trackErrors": true,
+      "trackPerformance": true
+    },
+    "errorReporting": {
+      "enabled": true,
+      "sampleRate": 1.0
+    },
+    "performanceMonitoring": {
+      "enabled": true,
+      "sampleRate": 0.1
+    }
+  },
+  "security": {
+    "sessionTimeout": 3600000,
+    "maxFailedAttempts": 5,
+    "lockoutDuration": 900000,
+    "requireMFA": false,
+    "ipWhitelist": [],
+    "auditLogging": true
+  },
+  "ui": {
+    "theme": "default",
+    "compactMode": false,
+    "showHelpTooltips": true,
+    "defaultPageSize": 25,
+    "maxPageSize": 100
+  },
+  "api": {
+    "baseUrl": "/api/admin",
+    "timeout": 30000,
+    "retryAttempts": 3,
+    "retryDelay": 1000
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 300000,
+    "maxSize": 100
+  },
+  "notifications": {
+    "enabled": true,
+    "position": "top-right",
+    "duration": 5000,
+    "showProgress": true
+  }
+}

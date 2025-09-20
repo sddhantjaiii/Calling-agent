@@ -1,0 +1,283 @@
+/* High Contrast Mode Styles */
+.high-contrast {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --popover: #000000;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #333333;
+  --secondary-foreground: #ffffff;
+  --muted: #333333;
+  --muted-foreground: #cccccc;
+  --accent: #333333;
+  --accent-foreground: #ffffff;
+  --destructive: #ff0000;
+  --destructive-foreground: #ffffff;
+  --border: #ffffff;
+  --input: #333333;
+  --ring: #ffffff;
+}
+
+.high-contrast * {
+  border-color: #ffffff !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.high-contrast button,
+.high-contrast input,
+.high-contrast select,
+.high-contrast textarea {
+  border: 2px solid #ffffff !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.high-contrast button:hover,
+.high-contrast button:focus {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.high-contrast a {
+  color: #00ffff !important;
+  text-decoration: underline !important;
+}
+
+.high-contrast a:hover,
+.high-contrast a:focus {
+  color: #ffff00 !important;
+}
+
+/* Keyboard Navigation Styles */
+.keyboard-user *:focus {
+  outline: 3px solid #0066cc !important;
+  outline-offset: 2px !important;
+}
+
+.keyboard-user button:focus,
+.keyboard-user input:focus,
+.keyboard-user select:focus,
+.keyboard-user textarea:focus,
+.keyboard-user a:focus {
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.5) !important;
+}
+
+/* Skip Links */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-only.focus:focus,
+.sr-only:focus-within {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+.focus-within\:not-sr-only:focus-within .sr-only {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* Touch-friendly targets */
+@media (pointer: coarse) {
+  button,
+  input,
+  select,
+  textarea,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus indicators for different input methods */
+.js-focus-visible :focus:not(.focus-visible) {
+  outline: none;
+}
+
+.js-focus-visible .focus-visible {
+  outline: 3px solid #0066cc;
+  outline-offset: 2px;
+}
+
+/* High contrast focus indicators */
+.high-contrast .js-focus-visible .focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Ensure sufficient color contrast for text */
+.text-gray-500 {
+  color: #6b7280;
+}
+
+.high-contrast .text-gray-500 {
+  color: #ffffff !important;
+}
+
+.text-gray-600 {
+  color: #4b5563;
+}
+
+.high-contrast .text-gray-600 {
+  color: #ffffff !important;
+}
+
+/* Table accessibility */
+table {
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+}
+
+th[scope="col"] {
+  border-bottom: 2px solid #e5e7eb;
+}
+
+th[scope="row"] {
+  border-right: 2px solid #e5e7eb;
+}
+
+.high-contrast th[scope="col"],
+.high-contrast th[scope="row"] {
+  border-color: #ffffff !important;
+}
+
+/* Form accessibility */
+label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+input:invalid,
+select:invalid,
+textarea:invalid {
+  border-color: #ef4444;
+}
+
+.high-contrast input:invalid,
+.high-contrast select:invalid,
+.high-contrast textarea:invalid {
+  border-color: #ff0000 !important;
+}
+
+/* Error states */
+.error {
+  color: #ef4444;
+}
+
+.high-contrast .error {
+  color: #ff0000 !important;
+}
+
+/* Success states */
+.success {
+  color: #10b981;
+}
+
+.high-contrast .success {
+  color: #00ff00 !important;
+}
+
+/* Warning states */
+.warning {
+  color: #f59e0b;
+}
+
+.high-contrast .warning {
+  color: #ffff00 !important;
+}
+
+/* Loading states */
+.loading {
+  opacity: 0.6;
+}
+
+.high-contrast .loading {
+  opacity: 1 !important;
+  background-color: #333333 !important;
+}
+
+/* Responsive text sizing */
+@media (max-width: 640px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  html {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1025px) {
+  html {
+    font-size: 18px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+  
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+  
+  abbr[title]:after {
+    content: " (" attr(title) ")";
+  }
+}

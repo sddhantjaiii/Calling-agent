@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Admin Analytics</title>
+</head>
+<body>
+    <h1>Test Admin Analytics Endpoint</h1>
+    <button onclick="testAnalytics()">Test Analytics</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAnalytics() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                // First login to get token
+                const loginResponse = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'test6@gmail.com',
+                        password: 'admin123'
+                    })
+                });
+
+                const loginData = await loginResponse.json();
+                console.log('Login response:', loginData);
+
+                if (!loginData.token) {
+                    throw new Error('Login failed');
+                }
+
+                // Test analytics endpoint
+                const analyticsResponse = await fetch('http://localhost:3000/api/admin/analytics/system', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${loginData.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const analyticsData = await analyticsResponse.json();
+                console.log('Analytics response:', analyticsData);
+
+                resultDiv.innerHTML = `
+                    <h2>Success!</h2>
+                    <p>Status: ${analyticsResponse.status}</p>
+                    <p>Total Users: ${analyticsData.data?.users?.total || 'N/A'}</p>
+                    <p>Total Agents: ${analyticsData.data?.agents?.total || 'N/A'}</p>
+                    <pre>${JSON.stringify(analyticsData, null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<h2>Error!</h2><p>${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
