@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/adminController';
-import { authenticateToken, requireAdmin, requireSuperAdmin, logAdminAction } from '../middleware';
+import { authenticateToken } from '../middleware/auth';
+import { requireAdmin, requireSuperAdmin, logAdminAction } from '../middleware/adminAuth';
 import phoneNumberRoutes from './phoneNumbers';
 
 const router = Router();

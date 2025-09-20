@@ -809,6 +809,7 @@ export class AdminController {
       res.json({
         success: true,
         data: {
+          hasAccess: isAdmin,  // Frontend expects this property
           isAdmin,
           role: user.role,
           userId: user.id,
@@ -1328,7 +1329,7 @@ export class AdminController {
   static async createAgent(req: Request, res: Response): Promise<void> {
     try {
       const { assignToUserId, ...agentData } = req.body;
-      const adminUserId = (req as any).adminUser?.id;
+      const adminUserId = (req as any).adminUser?.id || req.userId;
 
       const agent = await adminService.createAgent(agentData, assignToUserId, adminUserId);
 
