@@ -107,6 +107,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   };
 
   private sendErrorToMonitoring = (errorDetails: ErrorDetails) => {
+    // Temporarily disabled to prevent 405 errors
+    // TODO: Set up proper error monitoring endpoint or use a third-party service like Sentry
+    console.warn('Error monitoring disabled. Error details:', errorDetails);
+    
+    /*
     // In a real application, send to monitoring service like Sentry, LogRocket, etc.
     // For now, we'll just log it
     try {
@@ -123,6 +128,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     } catch {
       // Silently fail if error reporting fails
     }
+    */
   };
 
   private isCriticalError = (error: Error): boolean => {

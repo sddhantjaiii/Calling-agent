@@ -126,10 +126,32 @@ const Customers = ({}: CustomersProps) => {
       setLoading(true);
       setError(null);
       const response = await apiService.getCustomers();
-      setCustomers(response.data || response as any);
+      
+      // Ensure we always set an array for customers
+      let customersData: Customer[] = [];
+      
+      if (response?.success && response?.data) {
+        // Standard API response format: { success: true, data: [...] }
+        if (Array.isArray(response.data)) {
+          customersData = response.data;
+        } else if (response.data.customers && Array.isArray(response.data.customers)) {
+          // Nested format: { success: true, data: { customers: [...] } }
+          customersData = response.data.customers;
+        }
+      } else if (Array.isArray(response)) {
+        // Direct array response
+        customersData = response;
+      } else if (response && Array.isArray((response as any).data)) {
+        // Fallback for other response formats
+        customersData = (response as any).data;
+      }
+      
+      setCustomers(customersData);
     } catch (error) {
       console.error('Error fetching customers:', error);
       setError('Failed to load customers data');
+      // Ensure customers is always an array, even on error
+      setCustomers([]);
     } finally {
       setLoading(false);
     }
@@ -140,7 +162,19 @@ const Customers = ({}: CustomersProps) => {
     try {
       setTimelineLoading(true);
       const response = await apiService.getCustomer(customer.id);
-      setCustomerTimeline(response.data.timeline || []);
+      
+      // Ensure timeline is always an array
+      let timelineData: CustomerTimelineEntry[] = [];
+      
+      if (response?.success && response?.data) {
+        if (Array.isArray(response.data.timeline)) {
+          timelineData = response.data.timeline;
+        } else if (Array.isArray(response.data)) {
+          timelineData = response.data;
+        }
+      }
+      
+      setCustomerTimeline(timelineData);
     } catch (error) {
       console.error('Error fetching customer timeline:', error);
       setCustomerTimeline([]);
@@ -166,7 +200,7 @@ const Customers = ({}: CustomersProps) => {
     fetchCustomers();
   }, []);
 
-  const filteredCustomers = customers.filter((customer) => {
+  const filteredCustomers = Array.isArray(customers) ? customers.filter((customer) => {
     const matchesSearch = customer.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase()) ||
@@ -177,7 +211,7 @@ const Customers = ({}: CustomersProps) => {
     const matchesStatus = statusFilter === "all" || customer.status === statusFilter;
     
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
 
   const handleSelectCustomer = (customerId: string, checked: boolean) => {
     if (checked) {
@@ -201,11 +235,11 @@ const Customers = ({}: CustomersProps) => {
       
       // Optimistically update the local state
       setCustomers(prevCustomers => 
-        prevCustomers.map(c => 
+        Array.isArray(prevCustomers) ? prevCustomers.map(c => 
           c.id === customer.id 
             ? { ...c, status: newStatus }
             : c
-        )
+        ) : []
       );
       
       // Call API to update status
@@ -218,11 +252,11 @@ const Customers = ({}: CustomersProps) => {
       
       // Revert the optimistic update on error
       setCustomers(prevCustomers => 
-        prevCustomers.map(c => 
+        Array.isArray(prevCustomers) ? prevCustomers.map(c => 
           c.id === customer.id 
             ? { ...c, status: customer.status }
             : c
-        )
+        ) : []
       );
     }
   };
@@ -238,11 +272,11 @@ const Customers = ({}: CustomersProps) => {
       
       // Optimistically update the local state
       setCustomers(prevCustomers => 
-        prevCustomers.map(c => 
+        Array.isArray(prevCustomers) ? prevCustomers.map(c => 
           c.id === customer.id 
             ? { ...c, notes: editedNotes }
             : c
-        )
+        ) : []
       );
       
       // Call API to update notes
@@ -257,11 +291,11 @@ const Customers = ({}: CustomersProps) => {
       
       // Revert the optimistic update on error
       setCustomers(prevCustomers => 
-        prevCustomers.map(c => 
+        Array.isArray(prevCustomers) ? prevCustomers.map(c => 
           c.id === customer.id 
             ? { ...c, notes: customer.notes }
             : c
-        )
+        ) : []
       );
     } finally {
       setSavingNotes(false);
@@ -836,7 +870,7 @@ const Customers = ({}: CustomersProps) => {
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{customers.length}</div>
+            <div className="text-2xl font-bold">{Array.isArray(customers) ? customers.length : 0}</div>
           </CardContent>
         </Card>
         
@@ -849,7 +883,7 @@ const Customers = ({}: CustomersProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {customers.filter(c => c.status === 'active').length}
+              {Array.isArray(customers) ? customers.filter(c => c.status === 'active').length : 0}
             </div>
           </CardContent>
         </Card>
@@ -863,7 +897,7 @@ const Customers = ({}: CustomersProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {customers.filter(c => c.status === 'inactive').length}
+              {Array.isArray(customers) ? customers.filter(c => c.status === 'inactive').length : 0}
             </div>
           </CardContent>
         </Card>
@@ -877,10 +911,10 @@ const Customers = ({}: CustomersProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {customers.filter(c => 
+              {Array.isArray(customers) ? customers.filter(c => 
                 new Date(c.conversion_date).getMonth() === new Date().getMonth() &&
                 new Date(c.conversion_date).getFullYear() === new Date().getFullYear()
-              ).length}
+              ).length : 0}
             </div>
           </CardContent>
         </Card>

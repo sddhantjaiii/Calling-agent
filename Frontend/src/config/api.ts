@@ -1,7 +1,32 @@
 // API Configuration for Backend Integration
 // This file configures the frontend to connect to the backend APIs
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+// Determine API base URL based on environment
+const getApiBaseUrl = () => {
+  // Check for explicit environment variable first
+  if (import.meta.env.VITE_API_BASE_URL) {
+    console.log('Using VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Production environment detection
+  if (import.meta.env.PROD || window.location.hostname.includes('vercel.app')) {
+    // IMPORTANT: You need to replace this with your actual backend URL
+    // The 405 errors happen because the frontend is trying to call APIs on itself
+    // instead of the backend server
+    console.warn('⚠️ Using placeholder backend URL. Please set VITE_API_BASE_URL environment variable in Vercel settings!');
+    
+    // For now, try to use the backend if it's deployed alongside
+    // This is a temporary fix - you should set the proper environment variable
+    return 'https://your-backend-domain.com'; // ⚠️ REPLACE WITH ACTUAL BACKEND URL
+  }
+  
+  // Development fallback
+  console.log('Using development backend URL: http://localhost:3000');
+  return 'http://localhost:3000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 const API_URL = `${API_BASE_URL}/api`;
 
 export const API_ENDPOINTS = {
@@ -157,6 +182,17 @@ export const API_ENDPOINTS = {
     CHECK_CREDITS: `${API_URL}/user/check-credits`,
     DELETE_ACCOUNT: `${API_URL}/user/account`,
     UPDATE_PASSWORD: `${API_URL}/user/password`,
+  },
+
+  // Customers
+  CUSTOMERS: {
+    LIST: `${API_URL}/customers`,
+    CREATE: `${API_URL}/customers`,
+    GET: (id: string) => `${API_URL}/customers/${id}`,
+    UPDATE: (id: string) => `${API_URL}/customers/${id}`,
+    DELETE: (id: string) => `${API_URL}/customers/${id}`,
+    CONVERT: `${API_URL}/customers/convert`,
+    ANALYTICS: `${API_URL}/customers/analytics`,
   },
 
   // Email

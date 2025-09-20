@@ -1396,7 +1396,7 @@ class ApiService {
       notes: customerData?.notes || ''
     };
 
-    return this.request<any>('/api/customers/convert', {
+    return this.request<any>(API_ENDPOINTS.CUSTOMERS.CONVERT, {
       method: 'POST',
       body: JSON.stringify(requestData),
     });
@@ -1410,7 +1410,7 @@ class ApiService {
       throw createApiError('User must be authenticated to get customers', 401, 'UNAUTHORIZED');
     }
 
-    let url = '/api/customers';
+    let url = API_ENDPOINTS.CUSTOMERS.LIST;
     if (params) {
       const queryParams = new URLSearchParams();
       if (params.status) queryParams.append('status', params.status);
@@ -1435,7 +1435,7 @@ class ApiService {
       throw createApiError('User must be authenticated to get customer details', 401, 'UNAUTHORIZED');
     }
 
-    return this.request<any>(`/api/customers/${customerId}`, {
+    return this.request<any>(API_ENDPOINTS.CUSTOMERS.GET(customerId), {
       method: 'GET',
     });
   }
@@ -1447,7 +1447,7 @@ class ApiService {
       throw createApiError('User must be authenticated to update customers', 401, 'UNAUTHORIZED');
     }
 
-    return this.request<any>(`/api/customers/${customerId}`, {
+    return this.request<any>(API_ENDPOINTS.CUSTOMERS.UPDATE(customerId), {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });

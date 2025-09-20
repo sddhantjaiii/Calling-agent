@@ -264,6 +264,11 @@ export class ErrorHandler {
    * Send error to monitoring service
    */
   private sendErrorToMonitoring(errorDetails: any): void {
+    // Temporarily disabled to prevent 405 errors
+    // TODO: Set up proper error monitoring endpoint or use a third-party service like Sentry
+    console.warn('Error monitoring disabled. Error details:', errorDetails);
+    
+    /* 
     try {
       fetch('/api/errors', {
         method: 'POST',
@@ -277,6 +282,7 @@ export class ErrorHandler {
     } catch {
       // Silently fail if error reporting fails
     }
+    */
   }
 }
 
