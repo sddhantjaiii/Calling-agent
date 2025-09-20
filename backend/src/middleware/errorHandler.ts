@@ -98,13 +98,22 @@ class Logger {
   private accessLogFile: string;
 
   constructor() {
-    this.logDir = path.join(process.cwd(), 'logs');
+    // Use /tmp/logs for Vercel compatibility
+    if (process.env.VERCEL || process.env.NOW_REGION || process.env.NOW) {
+      this.logDir = path.join('/tmp', 'logs');
+    } else {
+      this.logDir = path.join(process.cwd(), 'logs');
+    }
     this.errorLogFile = path.join(this.logDir, 'error.log');
     this.accessLogFile = path.join(this.logDir, 'access.log');
-    
-    // Create logs directory if it doesn't exist
-    if (!fs.existsSync(this.logDir)) {
-      fs.mkdirSync(this.logDir, { recursive: true });
+    // Try to create logs directory if possible
+    try {
+      if (!fs.existsSync(this.logDir)) {
+        fs.mkdirSync(this.logDir, { recursive: true });
+      }
+      this.canWriteLogs = true;
+    } catch (e) {
+      this.canWriteLogs = false;
     }
   }
 
@@ -119,7 +128,9 @@ class Logger {
     return JSON.stringify(logEntry) + '\n';
   }
 
+  private canWriteLogs: boolean = true;
   private writeToFile(filename: string, content: string): void {
+    if (!this.canWriteLogs) return;
     try {
       fs.appendFileSync(filename, content);
     } catch (error) {
@@ -130,9 +141,8 @@ class Logger {
   error(message: string, meta?: any): void {
     const logEntry = this.formatLogEntry('ERROR', message, meta);
     this.writeToFile(this.errorLogFile, logEntry);
-    
-    // Also log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    // Always log to console in production on Vercel
+    if (process.env.NODE_ENV === 'development' || !this.canWriteLogs) {
       console.error('ERROR:', message, meta);
     }
   }
@@ -140,8 +150,7 @@ class Logger {
   warn(message: string, meta?: any): void {
     const logEntry = this.formatLogEntry('WARN', message, meta);
     this.writeToFile(this.errorLogFile, logEntry);
-    
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || !this.canWriteLogs) {
       console.warn('WARN:', message, meta);
     }
   }
@@ -149,8 +158,7 @@ class Logger {
   info(message: string, meta?: any): void {
     const logEntry = this.formatLogEntry('INFO', message, meta);
     this.writeToFile(this.accessLogFile, logEntry);
-    
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || !this.canWriteLogs) {
       console.info('INFO:', message, meta);
     }
   }
