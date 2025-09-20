@@ -5,8 +5,10 @@
  * Provides real-time monitoring and alerting for database trigger performance
  */
 
-import { Pool } from 'pg';
-import config from '../config/database';
+import { Pool, PoolConfig } from 'pg';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 interface TriggerMetrics {
   trigger_name: string;
@@ -39,6 +41,15 @@ class TriggerPerformanceMonitor {
   private readonly CRITICAL_ERROR_RATE_PCT = 15.0;
 
   constructor() {
+    const config: PoolConfig = {
+      connectionString: process.env.DATABASE_URL || '',
+      ssl: { rejectUnauthorized: false },
+      max: 10,
+      min: 2,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    };
+    
     this.pool = new Pool(config);
   }
 

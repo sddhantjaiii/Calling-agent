@@ -17,11 +17,12 @@ interface Notification {
 }
 
 // Get smart notifications for the authenticated user
-export const getNotifications = async (req: Request, res: Response) => {
+export const getNotifications = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.id;
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
+      res.status(401).json({ success: false, message: 'User not authenticated' });
+      return;
     }
 
     // Get recent smart notifications from lead analytics
@@ -49,7 +50,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 
     const result = await pool.query(query, [userId]);
     
-    const notifications: Notification[] = result.rows.map(row => ({
+    const notifications: Notification[] = result.rows.map((row: any) => ({
       id: row.id,
       leadId: row.lead_id,
       contactId: row.contact_id,
@@ -84,13 +85,14 @@ export const getNotifications = async (req: Request, res: Response) => {
 };
 
 // Mark a notification as read
-export const markNotificationAsRead = async (req: Request, res: Response) => {
+export const markNotificationAsRead = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).user?.id;
     const { id } = req.params;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
+      res.status(401).json({ success: false, message: 'User not authenticated' });
+      return;
     }
 
     // Update the notification as read
@@ -107,10 +109,11 @@ export const markNotificationAsRead = async (req: Request, res: Response) => {
     const result = await pool.query(query, [id, userId]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ 
+      res.status(404).json({ 
         success: false, 
         message: 'Notification not found' 
       });
+      return;
     }
 
     res.json({

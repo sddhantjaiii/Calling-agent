@@ -1,5 +1,20 @@
 import { logger } from '../utils/logger';
-import { DatabaseConnection } from '../config/database';
+import { Pool, PoolConfig } from 'pg';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+// Create database connection pool
+const config: PoolConfig = {
+  connectionString: process.env.DATABASE_URL || '',
+  ssl: { rejectUnauthorized: false },
+  max: 10,
+  min: 2,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+};
+
+const pool = new Pool(config);
 
 export interface AgentCTAMetrics {
     agent_id: string;
@@ -64,7 +79,7 @@ export class AgentCTAAnalyticsService {
         ORDER BY aa.date DESC
       `;
 
-            const result = await DatabaseConnection.query(query, [userId, agentId, dateFrom, dateTo]);
+            const result = await pool.query(query, [userId, agentId, dateFrom, dateTo]);
 
             return result.rows.map((row: any) => ({
                 agent_id: row.agent_id,
@@ -111,7 +126,7 @@ export class AgentCTAAnalyticsService {
           AND aa.hour IS NULL -- Daily aggregates only
       `;
 
-            const result = await DatabaseConnection.query(query, [userId, dateFrom, dateTo]);
+            const result = await pool.query(query, [userId, dateFrom, dateTo]);
             const stats = result.rows[0];
 
             return {
@@ -172,7 +187,7 @@ export class AgentCTAAnalyticsService {
         LIMIT $4
       `;
 
-            const result = await DatabaseConnection.query(query, [userId, dateFrom, dateTo, limit]);
+            const result = await pool.query(query, [userId, dateFrom, dateTo, limit]);
 
             return result.rows.map((row: any) => {
                 // Determine most popular CTA
@@ -278,7 +293,7 @@ export class AgentCTAAnalyticsService {
         ORDER BY ds.date
       `;
 
-            const result = await DatabaseConnection.query(query, [userId, dateFrom, dateTo]);
+            const result = await pool.query(query, [userId, dateFrom, dateTo]);
 
             return result.rows.map((row: any) => ({
                 date: row.date,

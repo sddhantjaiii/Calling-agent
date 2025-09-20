@@ -59,7 +59,12 @@ export class ContactModel extends BaseModel<ContactInterface> {
    * Create a new contact
    */
   async createContact(contactData: CreateContactData): Promise<ContactInterface> {
-    return await this.create(contactData);
+    // Ensure is_auto_created has a default value
+    const normalizedData = {
+      ...contactData,
+      is_auto_created: contactData.is_auto_created ?? false
+    };
+    return await this.create(normalizedData);
   }
 
   /**

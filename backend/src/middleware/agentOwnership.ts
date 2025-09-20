@@ -5,6 +5,7 @@ import AgentModel, { AgentInterface } from '../models/Agent';
 // Extend AuthenticatedRequest to include agent
 export interface AgentOwnershipRequest extends AuthenticatedRequest {
   agent?: AgentInterface;
+  userAgentIds?: string[];
 }
 
 /**

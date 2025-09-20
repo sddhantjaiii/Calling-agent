@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
-import { Pool } from 'pg';
-import pool from '../config/database';
+import { Pool, PoolConfig } from 'pg';
 import { AuthenticatedRequest } from '../middleware/auth';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 export interface FollowUp {
   id: string;
@@ -31,7 +33,15 @@ export class FollowUpController {
   private pool: Pool;
 
   constructor() {
-    this.pool = pool;
+    const config: PoolConfig = {
+      connectionString: process.env.DATABASE_URL || '',
+      ssl: { rejectUnauthorized: false },
+      max: 10,
+      min: 2,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    };
+    this.pool = new Pool(config);
   }
 
   async getFollowUps(req: AuthenticatedRequest, res: Response): Promise<void> {

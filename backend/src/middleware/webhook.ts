@@ -46,14 +46,14 @@ export function validateWebhookHeaders(req: Request, res: Response, next: NextFu
   const contentType = req.headers['content-type'];
   if (!contentType) {
     validationErrors.push('Missing Content-Type header');
-  } else if (!contentType.includes('application/json')) {
+  } else if (!contentType?.includes('application/json')) {
     validationErrors.push(`Invalid Content-Type: ${contentType}. Expected application/json`);
   }
 
   // Validate Content-Length if present
   const contentLength = req.headers['content-length'];
   if (contentLength) {
-    const length = parseInt(contentLength, 10);
+    const length = parseInt(contentLength || '0', 10);
     if (isNaN(length) || length < 0) {
       validationErrors.push(`Invalid Content-Length: ${contentLength}`);
     } else if (length > 10 * 1024 * 1024) { // 10MB limit

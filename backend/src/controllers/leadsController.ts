@@ -593,7 +593,7 @@ export class LeadsController {
           groupKey = `phone:${extractedPhone}`;
           leadName = extractedName || `Anonymous ${new Date(call.created_at).toLocaleString()}`;
           leadPhone = extractedPhone;
-          leadEmail = extractedEmail;
+          leadEmail = extractedEmail || null;
           displayInfo = {
             type: 'phone',
             phone: extractedPhone,
@@ -1007,7 +1007,7 @@ export class LeadsController {
 
     const result = await pool.query(query, [userId]);
     
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       userId: row.user_id,
       leadPhone: row.lead_phone,

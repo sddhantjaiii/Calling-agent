@@ -16,6 +16,7 @@ export interface CallInterface extends BaseModelInterface {
   status: 'completed' | 'failed' | 'in_progress' | 'cancelled';
   recording_url?: string;
   metadata: any;
+  lead_type?: 'inbound' | 'outbound';
   created_at: Date;
   completed_at?: Date;
 }

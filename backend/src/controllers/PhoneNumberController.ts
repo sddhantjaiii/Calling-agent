@@ -361,12 +361,14 @@ export class PhoneNumberController {
         req.userId!,
         'CREATE_PHONE_NUMBER',
         'phone_number',
-        insertResult.rows[0].id,
         {
-          name,
-          phone_number,
-          elevenlabs_phone_id,
-          assigned_to_user_id,
+          resource_id: insertResult.rows[0].id,
+          details: {
+            name,
+            phone_number,
+            elevenlabs_phone_id,
+            assigned_to_user_id,
+          }
         }
       );
 
@@ -501,8 +503,10 @@ export class PhoneNumberController {
         req.userId!,
         'UPDATE_PHONE_NUMBER',
         'phone_number',
-        id,
-        updateData
+        {
+          resource_id: id,
+          details: updateData
+        }
       );
 
       res.json({
@@ -554,8 +558,10 @@ export class PhoneNumberController {
         req.userId!,
         'DELETE_PHONE_NUMBER',
         'phone_number',
-        id,
-        { deleted_phone_number: existingResult.rows[0] }
+        {
+          resource_id: id,
+          details: { deleted_phone_number: existingResult.rows[0] }
+        }
       );
 
       res.json({
@@ -590,7 +596,7 @@ export class PhoneNumberController {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            details: validationResult.error.errors,
+            details: validationResult.error.issues,
           },
         });
         return;
@@ -645,10 +651,12 @@ export class PhoneNumberController {
         req.userId!,
         'ASSIGN_PHONE_NUMBER',
         'phone_number',
-        id,
-        { 
-          assigned_to_user_id, 
-          previous_assignment: existingResult.rows[0].assigned_to_user_id 
+        {
+          resource_id: id,
+          details: { 
+            assigned_to_user_id, 
+            previous_assignment: existingResult.rows[0].assigned_to_user_id 
+          }
         }
       );
 

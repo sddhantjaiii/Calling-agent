@@ -1,10 +1,10 @@
 import { logger } from '../utils/logger';
 import { webhookService } from './webhookService';
-import { ElevenLabsWebhookPayload, LegacyElevenLabsWebhookPayload } from './webhookService';
+import { ElevenLabsWebhookPayload } from './webhookService';
 
 interface WebhookRetryJob {
   id: string;
-  payload: ElevenLabsWebhookPayload | LegacyElevenLabsWebhookPayload;
+  payload: ElevenLabsWebhookPayload;
   attempts: number;
   maxAttempts: number;
   nextRetryAt: Date;
@@ -51,7 +51,7 @@ export class WebhookRetryService {
   /**
    * Add a failed webhook to the retry queue
    */
-  async addToRetryQueue(payload: ElevenLabsWebhookPayload | LegacyElevenLabsWebhookPayload, error: Error): Promise<void> {
+  async addToRetryQueue(payload: ElevenLabsWebhookPayload, error: Error): Promise<void> {
     // Extract conversation_id from either format
     const conversationId = getConversationId(payload);
     const jobId = `${conversationId}-${Date.now()}`;
@@ -280,35 +280,29 @@ export class WebhookRetryService {
 /**
  * Helper function to extract conversation_id from either webhook format
  */
-function getConversationId(payload: ElevenLabsWebhookPayload | LegacyElevenLabsWebhookPayload): string {
-  return 'data' in payload ? payload.data.conversation_id : payload.conversation_id;
+function getConversationId(payload: ElevenLabsWebhookPayload): string {
+  return payload.conversation_id;
 }
 
 /**
  * Helper function to extract agent_id from either webhook format
  */
-function getAgentId(payload: ElevenLabsWebhookPayload | LegacyElevenLabsWebhookPayload): string {
-  return 'data' in payload ? payload.data.agent_id : payload.agent_id;
+function getAgentId(payload: ElevenLabsWebhookPayload): string {
+  return payload.agent_id;
 }
 
 /**
  * Helper function to extract status from either webhook format
  */
-function getStatus(payload: ElevenLabsWebhookPayload | LegacyElevenLabsWebhookPayload): string {
-  if ('data' in payload) {
-    return payload.data.status || 'completed';
-  }
-  return payload.status;
+function getStatus(payload: ElevenLabsWebhookPayload): string {
+  return payload.status || 'completed';
 }
 
 /**
  * Helper function to extract duration from either webhook format
  */
-function getDuration(payload: ElevenLabsWebhookPayload | LegacyElevenLabsWebhookPayload): number | undefined {
-  if ('data' in payload) {
-    return payload.data.metadata?.call_duration_secs;
-  }
-  return payload.duration_seconds;
+function getDuration(payload: ElevenLabsWebhookPayload): number | undefined {
+  return payload.metadata?.call_duration_secs;
 }
 
 export const webhookRetryService = new WebhookRetryService();
