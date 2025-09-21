@@ -239,6 +239,15 @@ class EmailService {
    * Send welcome email with credit information
    */
   async sendWelcomeEmail(userEmail: string, userName: string, credits: number): Promise<boolean> {
+    const getFrontendBaseUrl = (): string => {
+      if (!process.env.FRONTEND_URL) {
+        throw new Error('FRONTEND_URL is not configured');
+      }
+      const base = process.env.FRONTEND_URL.split(',')[0].trim();
+      return base.endsWith('/') ? base.slice(0, -1) : base;
+    };
+
+    const appBaseUrl = getFrontendBaseUrl();
     const html = `
       <!DOCTYPE html>
       <html>
@@ -276,7 +285,7 @@ class EmailService {
               <li>Monitor call analytics and lead scoring</li>
               <li>Track your credit usage and purchase more when needed</li>
             </ul>
-            <a href="${process.env.FRONTEND_URL}" class="button">Get Started</a>
+            <a href="${appBaseUrl}" class="button">Get Started</a>
             <p>If you have any questions or need help getting started, don't hesitate to reach out to our support team.</p>
           </div>
           <div class="footer">
@@ -295,7 +304,7 @@ class EmailService {
       
       Your account has been successfully created! You've received ${credits} free credits to get started.
       
-      Visit ${process.env.FRONTEND_URL} to start creating your AI calling agents.
+      Visit ${appBaseUrl} to start creating your AI calling agents.
       
       If you need help, contact our support team.
     `;
@@ -312,6 +321,15 @@ class EmailService {
    * Send low credits notification
    */
   async sendLowCreditsNotification(userEmail: string, userName: string, currentCredits: number): Promise<boolean> {
+    const getFrontendBaseUrl = (): string => {
+      if (!process.env.FRONTEND_URL) {
+        throw new Error('FRONTEND_URL is not configured');
+      }
+      const base = process.env.FRONTEND_URL.split(',')[0].trim();
+      return base.endsWith('/') ? base.slice(0, -1) : base;
+    };
+
+    const appBaseUrl = getFrontendBaseUrl();
     const html = `
       <!DOCTYPE html>
       <html>
@@ -343,7 +361,7 @@ class EmailService {
             </div>
             <p>Don't let your campaigns stop! Top up your credits to keep your AI calling agents running smoothly.</p>
             <p>Remember: Each credit allows 1 minute of AI-powered calling.</p>
-            <a href="${process.env.FRONTEND_URL}/billing" class="button">Purchase Credits</a>
+            <a href="${appBaseUrl}/billing" class="button">Purchase Credits</a>
             <p>Thank you for using AI Calling Agent Platform!</p>
           </div>
           <div class="footer">
@@ -362,7 +380,7 @@ class EmailService {
       
       Your credit balance is running low: ${currentCredits} credits remaining.
       
-      Purchase more credits at ${process.env.FRONTEND_URL}/billing to keep your campaigns running.
+      Purchase more credits at ${appBaseUrl}/billing to keep your campaigns running.
       
       Thank you for using AI Calling Agent Platform!
     `;

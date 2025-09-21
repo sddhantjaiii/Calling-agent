@@ -735,19 +735,24 @@ class AuthService {
       if (!process.env.FRONTEND_URL) {
         throw new Error('FRONTEND_URL is not configured');
       }
-      const frontendUrl = process.env.FRONTEND_URL;
+      const base = process.env.FRONTEND_URL.split(',')[0].trim();
+      const frontendUrl = base.endsWith('/') ? base.slice(0, -1) : base;
       const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 
-      await emailService.sendVerificationEmail({
+      const sent = await emailService.sendVerificationEmail({
         userEmail: user.email,
         userName: user.name,
         verificationUrl: verificationUrl,
       });
 
-      console.log(`Email verification sent to: ${user.email}`);
+      if (sent) {
+        console.log(`Email verification sent to: ${user.email}`);
+      } else {
+        console.error('Email service returned false while sending verification email');
+      }
     } catch (error) {
-      console.error('Failed to send verification email:', error);
-      throw error;
+      // Do not block registration on email send failure
+      console.error('Failed to send verification email (continuing registration):', error);
     }
   }
 }

@@ -256,8 +256,9 @@ export class EmailController {
         if (!process.env.FRONTEND_URL) {
           throw new Error('FRONTEND_URL is not configured');
         }
-        const baseUrl = process.env.FRONTEND_URL.split(',')[0].trim();
-        const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
+  const base = process.env.FRONTEND_URL.split(',')[0].trim();
+  const baseUrl = base.endsWith('/') ? base.slice(0, -1) : base;
+  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
 
         // Send password reset email
         const emailSent = await emailService.sendPasswordResetEmail({

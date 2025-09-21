@@ -78,7 +78,8 @@ class VerificationService {
     if (!process.env.FRONTEND_URL) {
       throw new Error('FRONTEND_URL is not configured');
     }
-    const baseUrl = process.env.FRONTEND_URL.split(',')[0].trim();
+    const base = process.env.FRONTEND_URL.split(',')[0].trim();
+    const baseUrl = base.endsWith('/') ? base.slice(0, -1) : base;
     return `${baseUrl}/verify-email?token=${token}`;
   }
 
@@ -90,7 +91,8 @@ class VerificationService {
     if (!process.env.FRONTEND_URL) {
       throw new Error('FRONTEND_URL is not configured');
     }
-    const baseUrl = process.env.FRONTEND_URL.split(',')[0].trim();
+    const base = process.env.FRONTEND_URL.split(',')[0].trim();
+    const baseUrl = base.endsWith('/') ? base.slice(0, -1) : base;
     return `${baseUrl}/reset-password?token=${token}`;
   }
 

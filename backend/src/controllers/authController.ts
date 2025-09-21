@@ -426,11 +426,12 @@ export class AuthController {
    */
   static async googleCallback(req: Request, res: Response): Promise<void> {
     try {
-      const { code } = req.query;
+  const { code } = req.query;
       
       if (!code) {
         const frontendUrls = process.env.FRONTEND_URL?.split(',');
-        const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+        const base = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+        const frontendUrl = base.endsWith('/') ? base.slice(0, -1) : base;
         res.redirect(`${frontendUrl}/?error=oauth_no_code`);
         return;
       }
@@ -454,7 +455,8 @@ export class AuthController {
       
       if (!tokenData.access_token) {
         const frontendUrls = process.env.FRONTEND_URL?.split(',');
-        const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+        const base = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+        const frontendUrl = base.endsWith('/') ? base.slice(0, -1) : base;
         res.redirect(`${frontendUrl}/?error=oauth_token_failed`);
         return;
       }
@@ -470,7 +472,8 @@ export class AuthController {
       
       if (!profileData.email) {
         const frontendUrls = process.env.FRONTEND_URL?.split(',');
-        const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+        const base = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+        const frontendUrl = base.endsWith('/') ? base.slice(0, -1) : base;
         res.redirect(`${frontendUrl}/?error=oauth_no_email`);
         return;
       }
@@ -489,8 +492,9 @@ export class AuthController {
       const result = await authService.findOrCreateGoogleUser(googleProfile);
       
       if (!result) {
-        const frontendUrls = process.env.FRONTEND_URL?.split(',');
-        const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+      const frontendUrls = process.env.FRONTEND_URL?.split(',');
+      const base = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+      const frontendUrl = base.endsWith('/') ? base.slice(0, -1) : base;
         res.redirect(`${frontendUrl}/?error=oauth_user_creation_failed`);
         return;
       }
@@ -524,10 +528,11 @@ export class AuthController {
 
       res.redirect(redirectUrl.toString());
     } catch (error) {
-      console.error('Google OAuth callback error:', error);
-      const frontendUrls = process.env.FRONTEND_URL?.split(',');
-      const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
-      res.redirect(`${frontendUrl}/?error=oauth_callback_failed`);
+  console.error('Google OAuth callback error:', error);
+  const frontendUrls = process.env.FRONTEND_URL?.split(',');
+  const base = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
+  const frontendUrl = base.endsWith('/') ? base.slice(0, -1) : base;
+  res.redirect(`${frontendUrl}/?error=oauth_callback_failed`);
     }
   }
 }
