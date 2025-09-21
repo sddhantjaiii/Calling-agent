@@ -45,6 +45,17 @@ export interface ElevenLabsAgent {
   llm?: ElevenLabsLLMConfig;
   tts?: ElevenLabsTTSConfig;
   webhook?: ElevenLabsWebhookConfig;
+  platform_settings?: {
+    data_collection?: {
+      default?: {
+        type?: string;
+        description?: string;
+      };
+    };
+    widget_config?: {
+      description?: string;
+    };
+  };
   created_at?: string;
   updated_at?: string;
 }
@@ -86,6 +97,12 @@ export interface CreateAgentRequest {
       tint_color?: string;
       avatar_url?: string;
       description?: string;
+    };
+    data_collection?: {
+      default?: {
+        type?: string;
+        description?: string;
+      };
     };
   } | null;
   workflow?: any;
@@ -254,10 +271,32 @@ class ElevenLabsService {
    * Requirements: 5.1, 5.5, 5.6
    */
   async createAgent(agentData: CreateAgentRequest): Promise<ElevenLabsAgent> {
-    return this.executeWithRetry(
+    // Debug logging to check data_collection description length
+    if (agentData.platform_settings?.data_collection?.default?.description) {
+      const descLength = agentData.platform_settings.data_collection.default.description.length;
+      logger.info(`[ElevenLabs] Sending data_collection description with ${descLength} characters`);
+      logger.info(`[ElevenLabs] First 200 chars: ${agentData.platform_settings.data_collection.default.description.substring(0, 200)}...`);
+      logger.info(`[ElevenLabs] Last 200 chars: ...${agentData.platform_settings.data_collection.default.description.substring(Math.max(0, descLength - 200))}`);
+    }
+    
+    const result = await this.executeWithRetry(
       () => this.client.post('/v1/convai/agents/create', agentData),
       'createAgent'
     );
+    
+    // Debug logging to check what ElevenLabs returned
+    if (result.platform_settings?.data_collection?.default?.description) {
+      const returnedLength = result.platform_settings.data_collection.default.description.length;
+      logger.info(`[ElevenLabs] Received data_collection description with ${returnedLength} characters`);
+      if (agentData.platform_settings?.data_collection?.default?.description) {
+        const originalLength = agentData.platform_settings.data_collection.default.description.length;
+        if (returnedLength !== originalLength) {
+          logger.warn(`[ElevenLabs] Description length mismatch! Sent: ${originalLength}, Received: ${returnedLength}`);
+        }
+      }
+    }
+    
+    return result;
   }
 
   /**
@@ -291,10 +330,32 @@ class ElevenLabsService {
    * Requirements: 5.1, 5.5, 5.6
    */
   async updateAgent(agentId: string, agentData: UpdateAgentRequest): Promise<ElevenLabsAgent> {
-    return this.executeWithRetry(
+    // Debug logging to check data_collection description length for updates
+    if (agentData.platform_settings?.data_collection?.default?.description) {
+      const descLength = agentData.platform_settings.data_collection.default.description.length;
+      logger.info(`[ElevenLabs] Updating agent ${agentId} with data_collection description of ${descLength} characters`);
+      logger.info(`[ElevenLabs] First 200 chars: ${agentData.platform_settings.data_collection.default.description.substring(0, 200)}...`);
+      logger.info(`[ElevenLabs] Last 200 chars: ...${agentData.platform_settings.data_collection.default.description.substring(Math.max(0, descLength - 200))}`);
+    }
+    
+    const result = await this.executeWithRetry(
       () => this.client.patch(`/v1/convai/agents/${agentId}`, agentData),
       `updateAgent(${agentId})`
     );
+    
+    // Debug logging to check what ElevenLabs returned for updates
+    if (result.platform_settings?.data_collection?.default?.description) {
+      const returnedLength = result.platform_settings.data_collection.default.description.length;
+      logger.info(`[ElevenLabs] Agent ${agentId} updated, received data_collection description with ${returnedLength} characters`);
+      if (agentData.platform_settings?.data_collection?.default?.description) {
+        const originalLength = agentData.platform_settings.data_collection.default.description.length;
+        if (returnedLength !== originalLength) {
+          logger.warn(`[ElevenLabs] Agent ${agentId} description length mismatch! Sent: ${originalLength}, Received: ${returnedLength}`);
+        }
+      }
+    }
+    
+    return result;
   }
 
   /**

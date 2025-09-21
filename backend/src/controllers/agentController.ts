@@ -9,6 +9,14 @@ export class AgentController {
       const userId = req.user!.id;
       const agentData = req.body;
 
+      // Debug logging to check what we receive from frontend
+      if (agentData.data_collection?.default?.description) {
+        const receivedLength = agentData.data_collection.default.description.length;
+        logger.info(`[AgentController] Received data_collection description with ${receivedLength} characters from frontend`);
+        logger.info(`[AgentController] First 200 chars: ${agentData.data_collection.default.description.substring(0, 200)}...`);
+        logger.info(`[AgentController] Last 200 chars: ...${agentData.data_collection.default.description.substring(Math.max(0, receivedLength - 200))}`);
+      }
+
       // Validate required fields
       if (!agentData.name) {
         res.status(400).json({

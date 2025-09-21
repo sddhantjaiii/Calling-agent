@@ -66,7 +66,7 @@ export const sanitizeString = (input: string, config: SecurityConfig = defaultSe
     // Remove potentially dangerous characters
     sanitized = sanitized.replace(/[<>'"]/g, '');
     // Limit length to prevent buffer overflow attacks
-    sanitized = sanitized.substring(0, 1000);
+    sanitized = sanitized.substring(0, 10000);
   }
 
   return sanitized;

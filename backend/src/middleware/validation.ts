@@ -27,11 +27,13 @@ export const validateUrl = (url: string): boolean => {
   }
 };
 
-export const sanitizeInput = (input: string): string => {
+export const sanitizeInput = (input: string, allowLongText: boolean = false): string => {
   if (typeof input !== 'string') return String(input);
-  return input.trim()
-    .replace(/[<>'"]/g, '') // Remove potentially dangerous characters
-    .substring(0, 1000); // Limit length
+  const sanitized = input.trim()
+    .replace(/[<>'"]/g, ''); // Remove potentially dangerous characters
+  
+  // Allow longer text for specific fields like data_collection descriptions
+  return allowLongText ? sanitized : sanitized.substring(0, 10000);
 };
 
 export const sanitizeHtml = (input: string): string => {
@@ -205,20 +207,37 @@ export const validateRegistration = (req: Request, res: Response, next: NextFunc
     return;
   }
 
-  req.body.email = sanitizeInput(email);
-  req.body.name = sanitizeInput(name);
+  req.body.email = sanitizeInput(email, false);
+  req.body.name = sanitizeInput(name, false);
   next();
 };
 
 // Request sanitization middleware
 export const sanitizeRequest = (req: Request, res: Response, next: NextFunction): void => {
-  // Sanitize body
-  if (req.body && typeof req.body === 'object') {
-    for (const [key, value] of Object.entries(req.body)) {
-      if (typeof value === 'string') {
-        req.body[key] = sanitizeInput(value);
+  // Helper function to check if a field should allow long text
+  const shouldAllowLongText = (key: string, parentKeys: string[] = []): boolean => {
+    const fullPath = [...parentKeys, key].join('.');
+    // Allow long text for data_collection description fields
+    return fullPath.includes('data_collection') && key === 'description';
+  };
+
+  // Recursive function to sanitize nested objects
+  const sanitizeObject = (obj: any, parentKeys: string[] = []): void => {
+    if (obj && typeof obj === 'object') {
+      for (const [key, value] of Object.entries(obj)) {
+        if (typeof value === 'string') {
+          const allowLongText = shouldAllowLongText(key, parentKeys);
+          obj[key] = sanitizeInput(value, allowLongText);
+        } else if (typeof value === 'object' && value !== null) {
+          sanitizeObject(value, [...parentKeys, key]);
+        }
       }
     }
+  };
+
+  // Sanitize body
+  if (req.body && typeof req.body === 'object') {
+    sanitizeObject(req.body);
   }
 
   // Sanitize query parameters

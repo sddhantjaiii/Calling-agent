@@ -174,6 +174,12 @@ export interface CreateAgentRequest {
   language?: string;
   type?: 'CallAgent' | 'ChatAgent';
   description?: string;
+  data_collection?: {
+    default?: {
+      type?: string;
+      description?: string;
+    };
+  };
 }
 
 export interface UpdateAgentRequest {
@@ -184,6 +190,12 @@ export interface UpdateAgentRequest {
   status?: 'active' | 'draft';
   type?: 'CallAgent' | 'ChatAgent';
   description?: string;
+  data_collection?: {
+    default?: {
+      type?: string;
+      description?: string;
+    };
+  };
 }
 
 export interface Voice {

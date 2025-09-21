@@ -4,6 +4,7 @@ import { CreditTransactionModel } from '../models/CreditTransaction';
 import AdminAuditLogModel from '../models/AdminAuditLog';
 import { adminService } from '../services/adminService';
 import { logAdminActionManual } from '../middleware/adminAuth';
+import { logger } from '../utils/logger';
 
 // Admin controller - handles admin panel functionality
 export class AdminController {
@@ -1330,6 +1331,14 @@ export class AdminController {
     try {
       const { assignToUserId, ...agentData } = req.body;
       const adminUserId = (req as any).adminUser?.id || req.userId;
+
+      // Debug logging to check what admin controller receives
+      if (agentData.data_collection?.default?.description) {
+        const adminReceivedLength = agentData.data_collection.default.description.length;
+        logger.info(`[AdminController] Received data_collection description with ${adminReceivedLength} characters from admin frontend`);
+        logger.info(`[AdminController] First 200 chars: ${agentData.data_collection.default.description.substring(0, 200)}...`);
+        logger.info(`[AdminController] Last 200 chars: ...${agentData.data_collection.default.description.substring(Math.max(0, adminReceivedLength - 200))}`);
+      }
 
       const agent = await adminService.createAgent(agentData, assignToUserId, adminUserId);
 
