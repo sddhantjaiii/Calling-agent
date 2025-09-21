@@ -685,7 +685,7 @@ const LeadIntelligence = ({ onOpenProfile }: LeadIntelligenceProps) => {
 
       {/* Table */}
       <div className="border rounded-lg overflow-x-auto invisible-scrollbar flex-1 min-h-0">
-        <Table className="min-w-[1400px]">
+        <Table className="min-w-[1600px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -697,7 +697,7 @@ const LeadIntelligence = ({ onOpenProfile }: LeadIntelligenceProps) => {
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead>Contact</TableHead>
+              <TableHead className="min-w-[200px]">Contact</TableHead>
               <TableHead>Lead Type</TableHead>
               <TableHead>Recent Lead Tag</TableHead>
               <TableHead>Engagement</TableHead>
@@ -742,7 +742,7 @@ const LeadIntelligence = ({ onOpenProfile }: LeadIntelligenceProps) => {
                       </div>
                     )}
                     {contact.phone && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                         <Phone className="w-3 h-3" />
                         {contact.phone}
                       </div>
