@@ -4,6 +4,7 @@ import { Suspense, lazy } from 'react';
 import React from 'react';
 import { Toaster } from "sonner";
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from "./components/theme/ThemeProvider";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AgentProvider } from "./contexts/AgentContext";
@@ -160,6 +161,7 @@ function App() {
         </Suspense>
         <Toaster />
         <SpeedInsights />
+        <Analytics />
       </QueryClientProvider>
     </ErrorBoundary>
   );
