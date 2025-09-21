@@ -340,6 +340,7 @@ const LoginForm = () => {
           type="button"
           variant="outline"
           className="w-full py-3 border-gray-300 bg-gray-50 text-teal-800"
+          onClick={() => window.location.href = 'http://localhost:3000/api/auth/google'}
         >
           <div className="w-5 h-5 bg-blue-500 rounded-full mr-2"></div>
           Sign in with Google

@@ -335,7 +335,7 @@ export class EmailController {
 
       res.json({
         message: 'Password reset functionality is handled by Stack Auth',
-        redirectUrl: `${process.env.FRONTEND_URL}/login`,
+        redirectUrl: `${process.env.FRONTEND_URL}/`,
         timestamp: new Date(),
       });
     } catch (error) {

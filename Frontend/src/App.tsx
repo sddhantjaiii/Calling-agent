@@ -27,6 +27,7 @@ import AuditLogs from "./components/admin/AuditLogs";
 import Communication from "./components/admin/Communication";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { queryClient } from "./lib/queryClient";
+import OAuthCallback from "./pages/OAuthCallback";
 
 // Lazy load admin components to fix object-to-primitive conversion error
 const LazyUserManagement = lazy(() => import('./components/admin/UserManagement/UserManagement'));
@@ -86,6 +87,12 @@ function App() {
                             <EnhancedLeadCardDemo />
                           </ProtectedRoute>
                         }
+                      />
+
+                      {/* OAuth Callback Route */}
+                      <Route
+                        path="/oauth/callback"
+                        element={<OAuthCallback />}
                       />
 
                       {/* Admin Routes */}

@@ -9,7 +9,7 @@ export class AnalyticsController {
    */
   async getCallAnalytics(req: Request, res: Response): Promise<void> {
     const { callId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req.user as any)?.id;
     logger.info(`getCallAnalytics called for callId: ${callId} by user: ${userId}`);
 
     try {
@@ -77,7 +77,7 @@ export class AnalyticsController {
    */
   async getLeadAnalyticsList(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       
       if (!userId) {
         res.status(401).json({
@@ -137,7 +137,7 @@ export class AnalyticsController {
    */
   async getAnalyticsSummary(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       
       if (!userId) {
         res.status(401).json({
@@ -223,7 +223,7 @@ export class AnalyticsController {
    */
   async getScoreDistribution(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       
       if (!userId) {
         res.status(401).json({
@@ -283,7 +283,7 @@ export class AnalyticsController {
    */
   async getDashboardMetrics(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       
       if (!userId) {
         res.status(401).json({
@@ -322,7 +322,7 @@ export class AnalyticsController {
    */
   async getCallVolumeData(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       
       if (!userId) {
         res.status(401).json({
@@ -379,7 +379,7 @@ export class AnalyticsController {
    */
   async getLeadScoreTrends(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       
       if (!userId) {
         res.status(401).json({
@@ -436,7 +436,7 @@ export class AnalyticsController {
    */
   async getCTAPerformanceTrends(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       
       if (!userId) {
         res.status(401).json({
@@ -493,7 +493,7 @@ export class AnalyticsController {
    */
   async getTopPerformingAgents(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       
       if (!userId) {
         res.status(401).json({

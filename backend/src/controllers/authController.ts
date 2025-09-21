@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { authService } from '../services/authService';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { body, validationResult } from 'express-validator';
 
 // Authentication controller - handles user registration, login, and session management
@@ -246,16 +247,16 @@ export class AuthController {
 
       res.json({
         user: {
-          id: req.user.id,
-          email: req.user.email,
-          name: req.user.name,
-          credits: req.user.credits,
-          emailVerified: req.user.emailVerified,
-          isActive: req.user.isActive,
-          role: req.user.role,
-          authProvider: req.user.authProvider,
-          createdAt: req.user.createdAt,
-          updatedAt: req.user.updatedAt,
+          id: (req.user as any).id,
+          email: (req.user as any).email,
+          name: (req.user as any).name,
+          credits: (req.user as any).credits,
+          emailVerified: (req.user as any).emailVerified,
+          isActive: (req.user as any).isActive,
+          role: (req.user as any).role,
+          authProvider: (req.user as any).authProvider,
+          createdAt: (req.user as any).createdAt,
+          updatedAt: (req.user as any).updatedAt,
         },
         timestamp: new Date(),
       });
@@ -400,11 +401,11 @@ export class AuthController {
 
       res.json({
         session: {
-          userId: req.user.id,
-          email: req.user.email,
-          name: req.user.name,
-          isActive: req.user.isActive,
-          emailVerified: req.user.emailVerified,
+          userId: (req.user as any).id,
+          email: (req.user as any).email,
+          name: (req.user as any).name,
+          isActive: (req.user as any).isActive,
+          emailVerified: (req.user as any).emailVerified,
         },
         timestamp: new Date(),
       });
@@ -417,6 +418,116 @@ export class AuthController {
           timestamp: new Date(),
         },
       });
+    }
+  }
+
+  /**
+   * Google OAuth callback handler
+   */
+  static async googleCallback(req: Request, res: Response): Promise<void> {
+    try {
+      const { code } = req.query;
+      
+      if (!code) {
+        const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
+        const frontendUrl = frontendUrls[0].trim();
+        res.redirect(`${frontendUrl}/?error=oauth_no_code`);
+        return;
+      }
+
+      // Exchange code for access token
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: process.env.GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          code: code as string,
+          grant_type: 'authorization_code',
+          redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
+        }),
+      });
+
+      const tokenData = await tokenResponse.json() as any;
+      
+      if (!tokenData.access_token) {
+        const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
+        const frontendUrl = frontendUrls[0].trim();
+        res.redirect(`${frontendUrl}/?error=oauth_token_failed`);
+        return;
+      }
+
+      // Get user profile from Google
+      const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+        },
+      });
+
+      const profileData = await profileResponse.json() as any;
+      
+      if (!profileData.email) {
+        const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
+        const frontendUrl = frontendUrls[0].trim();
+        res.redirect(`${frontendUrl}/?error=oauth_no_email`);
+        return;
+      }
+
+      // Create Google profile object
+      const googleProfile = {
+        googleId: profileData.id,
+        email: profileData.email,
+        name: profileData.name,
+        profilePicture: profileData.picture,
+        firstName: profileData.given_name,
+        lastName: profileData.family_name
+      };
+
+      // Find or create user
+      const result = await authService.findOrCreateGoogleUser(googleProfile);
+      
+      if (!result) {
+        const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
+        const frontendUrl = frontendUrls[0].trim();
+        res.redirect(`${frontendUrl}/?error=oauth_user_creation_failed`);
+        return;
+      }
+
+      const { user, isNewUser } = result;
+
+      // Generate JWT tokens for the authenticated user
+      const token = authService.generateToken(user);
+      const refreshToken = authService.generateRefreshToken(user);
+
+      // Create session
+      const ipAddress = req.ip || req.socket.remoteAddress;
+      await authService.createSession(user.id, token, ipAddress, req.get('User-Agent'), refreshToken);
+
+      // Get the first frontend URL (for development, typically localhost:8080)
+      const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
+      const frontendUrl = frontendUrls[0].trim();
+
+      // Redirect to frontend with tokens and user info
+      const redirectUrl = new URL(`${frontendUrl}/oauth/callback`);
+      redirectUrl.searchParams.set('token', token);
+      redirectUrl.searchParams.set('refreshToken', refreshToken);
+      redirectUrl.searchParams.set('userId', user.id);
+      redirectUrl.searchParams.set('email', user.email);
+      redirectUrl.searchParams.set('name', user.name);
+      
+      // Only show company modal for newly created Google users
+      if (isNewUser) {
+        redirectUrl.searchParams.set('needsCompany', 'true');
+      }
+
+      res.redirect(redirectUrl.toString());
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
+      const frontendUrl = frontendUrls[0].trim();
+      res.redirect(`${frontendUrl}/?error=oauth_callback_failed`);
     }
   }
 }

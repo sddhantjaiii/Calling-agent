@@ -126,8 +126,8 @@ export const generalRateLimit = createRateLimit({
 
 export const authRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5,
-  blockDuration: 30 * 60 * 1000, // Block for 30 minutes after exceeding
+  maxRequests: process.env.NODE_ENV === 'development' ? 50 : 5, // Much higher limit for development
+  blockDuration: process.env.NODE_ENV === 'development' ? 0 : 30 * 60 * 1000, // No blocking in development
   keyGenerator: (req: Request) => req.ip || 'unknown',
   onLimitReached: (req: Request, res: Response) => {
     console.warn(`Authentication rate limit exceeded for IP: ${req.ip}`);

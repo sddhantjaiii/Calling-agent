@@ -1,13 +1,48 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import LoginForm from "@/components/auth/LoginForm";
 import SignUpForm from "@/components/auth/SignUpForm";
 
 const Index = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
+
+  // Handle OAuth errors from URL parameters
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      let errorMessage = 'OAuth login failed';
+      
+      switch (error) {
+        case 'oauth_no_code':
+          errorMessage = 'OAuth authorization code was not provided';
+          break;
+        case 'oauth_token_failed':
+          errorMessage = 'Failed to exchange authorization code for access token';
+          break;
+        case 'oauth_no_email':
+          errorMessage = 'Google account does not have an email address';
+          break;
+        case 'oauth_user_creation_failed':
+          errorMessage = 'Failed to create or link user account';
+          break;
+        case 'oauth_callback_failed':
+          errorMessage = 'OAuth callback processing failed';
+          break;
+        default:
+          errorMessage = `OAuth error: ${error}`;
+      }
+      
+      toast.error(errorMessage);
+      
+      // Clear error parameter from URL
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {

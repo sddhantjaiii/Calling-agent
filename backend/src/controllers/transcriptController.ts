@@ -10,7 +10,7 @@ export class TranscriptController {
    */
   static async searchTranscripts(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -110,7 +110,7 @@ export class TranscriptController {
    */
   static async getTranscriptByCallId(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -160,7 +160,7 @@ export class TranscriptController {
    */
   static async exportTranscript(req: Request, res: Response): Promise<Response | void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -210,7 +210,7 @@ export class TranscriptController {
    */
   static async getTranscriptAnalytics(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -248,7 +248,7 @@ export class TranscriptController {
    */
   static async getFormattedTranscript(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }

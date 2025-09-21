@@ -13,7 +13,7 @@ export class CallController {
   static async getCalls(req: Request, res: Response): Promise<Response> {
     try {
       const authReq = req as AgentOwnershipRequest;
-      const userId = authReq.user?.id;
+      const userId = (req.user as any)?.id;
       const specificAgent = authReq.agent;
 
       if (!userId) {
@@ -306,7 +306,7 @@ export class CallController {
    */
   static async getCall(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -341,7 +341,7 @@ export class CallController {
    */
   static async getCallTranscript(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -376,7 +376,7 @@ export class CallController {
    */
   static async getCallRecording(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -411,7 +411,7 @@ export class CallController {
    */
   static async searchCalls(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -489,7 +489,7 @@ export class CallController {
    */
   static async searchTranscripts(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -549,7 +549,7 @@ export class CallController {
    */
   static async getCallStats(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -587,7 +587,7 @@ export class CallController {
    */
   static async getRecentCalls(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -621,7 +621,7 @@ export class CallController {
    */
   static async getCallAudio(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({ error: 'User not authenticated' });
         return;

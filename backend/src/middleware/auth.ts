@@ -1,5 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
-import { authService, User } from '../services/authService';
+import { authService } from '../services/authService';
+
+// User type that matches what authService.getUserById returns
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  credits: number;
+  isActive: boolean;
+  emailVerified: boolean;
+  role: string;
+  authProvider: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Extend Express Request interface to include user
 declare global {
@@ -138,7 +152,7 @@ export const requireAdmin = (
   }
   
   // Check if user has admin role
-  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+  if ((req.user as any).role !== 'admin' && (req.user as any).role !== 'super_admin') {
     res.status(403).json({
       error: {
         code: 'INSUFFICIENT_PRIVILEGES',
@@ -172,7 +186,7 @@ export const requireSuperAdmin = (
   }
   
   // Check if user has super admin role
-  if (req.user.role !== 'super_admin') {
+  if ((req.user as any).role !== 'super_admin') {
     res.status(403).json({
       error: {
         code: 'INSUFFICIENT_PRIVILEGES',

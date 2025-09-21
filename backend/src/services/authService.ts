@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { databaseService } from './databaseService';
 import database from '../config/database';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   name: string;
@@ -591,7 +591,134 @@ class AuthService {
       return 0;
     }
   }
+
+  /**
+   * Find or create user from Google OAuth profile
+   * Handles account linking for existing email users
+   */
+  async findOrCreateGoogleUser(googleProfile: {
+    googleId: string;
+    email: string;
+    name: string;
+    profilePicture?: string;
+    firstName?: string;
+    lastName?: string;
+  }): Promise<{ user: User; isNewUser: boolean } | null> {
+    try {
+      // First, check if user already exists by email (for account linking)
+      const existingUser = await this.getUserByEmail(googleProfile.email);
+      
+      if (existingUser) {
+        // User exists with this email - link Google account
+        const updateQuery = `
+          UPDATE users 
+          SET google_id = $1, profile_picture = $2, updated_at = CURRENT_TIMESTAMP
+          WHERE email = $3
+          RETURNING id, email, name, credits, is_active, email_verified, role, auth_provider, created_at, updated_at
+        `;
+        
+        const result = await databaseService.query(updateQuery, [
+          googleProfile.googleId,
+          googleProfile.profilePicture,
+          googleProfile.email
+        ]);
+        
+        if (result.rows.length > 0) {
+          const userData = result.rows[0];
+          console.log('Successfully linked Google account to existing user:', userData.id);
+          
+          return {
+            user: {
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              credits: userData.credits,
+              isActive: userData.is_active,
+              emailVerified: userData.email_verified,
+              role: userData.role,
+              authProvider: userData.auth_provider,
+              createdAt: userData.created_at,
+              updatedAt: userData.updated_at,
+            },
+            isNewUser: false
+          };
+        }
+      }
+      
+      // Check if user already exists by Google ID
+      const googleUserQuery = `
+        SELECT id, email, name, credits, is_active, email_verified, role, auth_provider, created_at, updated_at
+        FROM users 
+        WHERE google_id = $1
+      `;
+      
+      const googleUserResult = await databaseService.query(googleUserQuery, [googleProfile.googleId]);
+      
+      if (googleUserResult.rows.length > 0) {
+        // User exists with this Google ID
+        const userData = googleUserResult.rows[0];
+        return {
+          user: {
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            credits: userData.credits,
+            isActive: userData.is_active,
+            emailVerified: userData.email_verified,
+            role: userData.role,
+            authProvider: userData.auth_provider,
+            createdAt: userData.created_at,
+            updatedAt: userData.updated_at,
+          },
+          isNewUser: false
+        };
+      }
+      
+      // Create new user from Google profile
+      const createUserQuery = `
+        INSERT INTO users (
+          email, name, google_id, profile_picture, credits, is_active, 
+          email_verified, auth_provider, role
+        )
+        VALUES ($1, $2, $3, $4, 15, true, true, 'google', 'user')
+        RETURNING id, email, name, credits, is_active, email_verified, role, auth_provider, created_at, updated_at
+      `;
+      
+      const createResult = await databaseService.query(createUserQuery, [
+        googleProfile.email,
+        googleProfile.name,
+        googleProfile.googleId,
+        googleProfile.profilePicture
+      ]);
+      
+      if (createResult.rows.length > 0) {
+        const userData = createResult.rows[0];
+        console.log('Successfully created new user from Google profile:', userData.id);
+        
+        return {
+          user: {
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            credits: userData.credits,
+            isActive: userData.is_active,
+            emailVerified: userData.email_verified,
+            role: userData.role,
+            authProvider: userData.auth_provider,
+            createdAt: userData.created_at,
+            updatedAt: userData.updated_at,
+          },
+          isNewUser: true
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error finding or creating Google user:', error);
+      return null;
+    }
+  }
 }
 
 export const authService = new AuthService();
-export { User, JWTPayload, LoginAttempt };
+export type { JWTPayload, LoginAttempt };

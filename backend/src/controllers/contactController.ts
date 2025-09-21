@@ -1,16 +1,15 @@
 import { Request, Response } from 'express';
 import { ContactService } from '../services/contactService';
 import { logger } from '../utils/logger';
-import { AuthenticatedRequest } from '../types/auth';
 
 // Contact controller - handles contact management and bulk uploads
 export class ContactController {
   /**
    * Get all contacts for the authenticated user
    */
-  static async getContacts(req: AuthenticatedRequest, res: Response): Promise<Response | void> {
+  static async getContacts(req: Request, res: Response): Promise<Response | void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -57,9 +56,9 @@ export class ContactController {
   /**
    * Create a new contact
    */
-  static async createContact(req: AuthenticatedRequest, res: Response): Promise<Response | void> {
+  static async createContact(req: Request, res: Response): Promise<Response | void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -114,9 +113,9 @@ export class ContactController {
   /**
    * Update an existing contact
    */
-  static async updateContact(req: AuthenticatedRequest, res: Response): Promise<Response | void> {
+  static async updateContact(req: Request, res: Response): Promise<Response | void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -169,9 +168,9 @@ export class ContactController {
   /**
    * Delete a contact
    */
-  static async deleteContact(req: AuthenticatedRequest, res: Response): Promise<Response | void> {
+  static async deleteContact(req: Request, res: Response): Promise<Response | void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -203,9 +202,9 @@ export class ContactController {
   /**
    * Get a single contact by ID
    */
-  static async getContact(req: AuthenticatedRequest, res: Response): Promise<Response | void> {
+  static async getContact(req: Request, res: Response): Promise<Response | void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -237,9 +236,9 @@ export class ContactController {
   /**
    * Get contact statistics for the authenticated user
    */
-  static async getContactStats(req: AuthenticatedRequest, res: Response): Promise<Response | void> {
+  static async getContactStats(req: Request, res: Response): Promise<Response | void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -451,11 +450,11 @@ export class ContactController {
   /**
    * Upload contacts from Excel file
    */
-  static async uploadContacts(req: AuthenticatedRequest, res: Response): Promise<Response | void> {
+  static async uploadContacts(req: Request, res: Response): Promise<Response | void> {
     console.log('🚀 UPLOAD CONTROLLER CALLED');
     
     try {
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         console.log('❌ User not authenticated');
         return res.status(401).json({ error: 'User not authenticated' });
