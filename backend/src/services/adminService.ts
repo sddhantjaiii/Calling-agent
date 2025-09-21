@@ -480,7 +480,7 @@ class AdminService {
     try {
       const { agentService } = await import('./agentService');
       
-      // Simplified data collection setup for testing
+      // Ensure data_collection is always included with default values
       if (!agentData.data_collection) {
         agentData.data_collection = {
           default: {
@@ -494,11 +494,11 @@ class AdminService {
           description: DEFAULT_DATA_COLLECTION_DESCRIPTION
         };
       } else {
-        // Ensure type is set
+        // Ensure type is set if not provided
         if (!agentData.data_collection.default.type) {
           agentData.data_collection.default.type = 'string';
         }
-        // Use provided description or default
+        // Prefill description if empty or not provided, but respect admin's choice to clear it
         if (agentData.data_collection.default.description === undefined) {
           agentData.data_collection.default.description = DEFAULT_DATA_COLLECTION_DESCRIPTION;
         }
