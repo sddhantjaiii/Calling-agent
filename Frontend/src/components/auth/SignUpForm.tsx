@@ -14,6 +14,7 @@ import {
   mergeValidationErrors,
   FORM_FIELD_MAPPINGS 
 } from "@/utils/serverValidationHandler";
+import API_ENDPOINTS from "@/config/api";
 
 const SignUpForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -128,7 +129,7 @@ const SignUpForm = () => {
       const success = await register(formData.email, formData.password, formData.name);
 
       if (success) {
-        toast.success("Account created successfully!");
+        toast.success("Account created successfully! Please check your email to verify your account.");
         navigate("/dashboard");
       }
       // Error handling is now done in AuthContext
@@ -315,7 +316,7 @@ const SignUpForm = () => {
           type="button"
           variant="outline"
           className="w-full py-3 border-gray-300 bg-gray-50 text-teal-800"
-          onClick={() => window.location.href = 'http://localhost:3000/api/auth/google'}
+          onClick={() => window.location.href = API_ENDPOINTS.AUTH.GOOGLE}
         >
           <div className="w-5 h-5 bg-blue-500 rounded-full mr-2"></div>
           Sign up with Google

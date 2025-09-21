@@ -14,10 +14,13 @@ import {
   mergeValidationErrors,
   FORM_FIELD_MAPPINGS 
 } from "@/utils/serverValidationHandler";
+import ForgotPassword from "./ForgotPassword";
+import API_ENDPOINTS from "@/config/api";
 
 const LoginForm = () => {
   const [isPhone, setIsPhone] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     emailOrPhone: "",
     password: "",
@@ -188,6 +191,11 @@ const LoginForm = () => {
     }));
   };
 
+  // Show forgot password form if requested
+  if (showForgotPassword) {
+    return <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />;
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Email/Phone Toggle */}
@@ -302,6 +310,7 @@ const LoginForm = () => {
         {!isPhone && (
           <button
             type="button"
+            onClick={() => setShowForgotPassword(true)}
             className="text-sm text-teal-600 hover:text-teal-500"
           >
             Forgot password?
@@ -340,7 +349,7 @@ const LoginForm = () => {
           type="button"
           variant="outline"
           className="w-full py-3 border-gray-300 bg-gray-50 text-teal-800"
-          onClick={() => window.location.href = 'http://localhost:3000/api/auth/google'}
+          onClick={() => window.location.href = API_ENDPOINTS.AUTH.GOOGLE}
         >
           <div className="w-5 h-5 bg-blue-500 rounded-full mr-2"></div>
           Sign in with Google

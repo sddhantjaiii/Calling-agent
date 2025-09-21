@@ -527,8 +527,8 @@ class ApiService {
         }
 
         const headers: Record<string, string> = {
-          // Only set Content-Type for non-FormData requests
-          ...(!(fetchOptions.body instanceof FormData) && { 'Content-Type': 'application/json' }),
+          // Only set Content-Type for requests with a body (and not FormData)
+          ...(fetchOptions.body && !(fetchOptions.body instanceof FormData) && { 'Content-Type': 'application/json' }),
           ...(!skipAuth && getAuthHeaders()),
           // Add agent ID as header as alternative
           ...(includeAgentId && (agentId || this.currentAgentId) && {
@@ -2219,8 +2219,14 @@ class ApiService {
   }
 
   // Email API methods
+  async sendVerificationEmail(): Promise<ApiResponse<EmailVerificationResponse>> {
+    return this.request<EmailVerificationResponse>(API_ENDPOINTS.EMAIL.SEND_VERIFICATION, {
+      method: 'POST',
+    });
+  }
+
   async sendEmailVerification(): Promise<ApiResponse<EmailVerificationResponse>> {
-    return this.request<EmailVerificationResponse>(API_ENDPOINTS.EMAIL.VERIFY, {
+    return this.request<EmailVerificationResponse>(API_ENDPOINTS.EMAIL.SEND_VERIFICATION, {
       method: 'POST',
     });
   }
@@ -2244,6 +2250,14 @@ class ApiService {
     return this.request<PasswordResetResponse>(API_ENDPOINTS.EMAIL.RESET_PASSWORD, {
       method: 'POST',
       body: JSON.stringify({ token, newPassword }),
+      skipAuth: true,
+    });
+  }
+
+  async validateResetToken(token: string): Promise<ApiResponse<{ valid: boolean }>> {
+    return this.request<{ valid: boolean }>(API_ENDPOINTS.EMAIL.VALIDATE_RESET_TOKEN, {
+      method: 'POST',
+      body: JSON.stringify({ token }),
       skipAuth: true,
     });
   }

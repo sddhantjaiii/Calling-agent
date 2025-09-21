@@ -18,7 +18,7 @@ interface TokenPayload {
 
 class VerificationService {
   private readonly JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-  private readonly EMAIL_VERIFICATION_EXPIRY = 24 * 60 * 60; // 24 hours in seconds
+  private readonly EMAIL_VERIFICATION_EXPIRY = 3 * 24 * 60 * 60; // 3 days in seconds
   private readonly PASSWORD_RESET_EXPIRY = 60 * 60; // 1 hour in seconds
 
   /**
@@ -75,7 +75,10 @@ class VerificationService {
    */
   generateVerificationUrl(userId: string, email: string): string {
     const token = this.generateEmailVerificationToken(userId, email);
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    if (!process.env.FRONTEND_URL) {
+      throw new Error('FRONTEND_URL is not configured');
+    }
+    const baseUrl = process.env.FRONTEND_URL.split(',')[0].trim();
     return `${baseUrl}/verify-email?token=${token}`;
   }
 
@@ -84,7 +87,10 @@ class VerificationService {
    */
   generatePasswordResetUrl(userId: string, email: string): string {
     const token = this.generatePasswordResetToken(userId, email);
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    if (!process.env.FRONTEND_URL) {
+      throw new Error('FRONTEND_URL is not configured');
+    }
+    const baseUrl = process.env.FRONTEND_URL.split(',')[0].trim();
     return `${baseUrl}/reset-password?token=${token}`;
   }
 

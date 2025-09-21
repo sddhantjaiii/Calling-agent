@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { databaseService } from './databaseService';
+import { emailService } from './emailService';
 import database from '../config/database';
 
 export interface User {
@@ -116,64 +117,66 @@ class AuthService {
    * Register new user
    */
   async register(email: string, password: string, name: string): Promise<{ user: User; token: string; refreshToken: string } | null> {
-    try {
-      // Check if user already exists
-      const existingUser = await this.getUserByEmail(email);
-      if (existingUser) {
-        throw new Error('User already exists with this email');
-      }
-
-      // Hash password
-      const passwordHash = await this.hashPassword(password);
-
-      // Generate email verification token
-      const emailVerificationToken = this.generateSecureToken();
-
-      // Create user
-      const query = `
-        INSERT INTO users (email, name, password_hash, email_verification_token, credits, is_active, email_verified, auth_provider, role)
-        VALUES ($1, $2, $3, $4, 15, true, false, 'email', 'user')
-        RETURNING id, email, name, credits, is_active, email_verified, role, auth_provider, created_at, updated_at
-      `;
-
-      const result = await databaseService.query(query, [email, name, passwordHash, emailVerificationToken]);
-      
-      if (result.rows.length === 0) {
-        throw new Error('Failed to create user');
-      }
-
-      const userData = result.rows[0];
-      const user: User = {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        credits: userData.credits,
-        isActive: userData.is_active,
-        emailVerified: userData.email_verified,
-        role: userData.role,
-        authProvider: userData.auth_provider,
-        createdAt: userData.created_at,
-        updatedAt: userData.updated_at,
-      };
-
-      // Generate JWT tokens
-      const token = this.generateToken(user);
-      const refreshToken = this.generateRefreshToken(user);
-
-      // Create session with both tokens
-      await this.createSession(user.id, token, undefined, undefined, refreshToken);
-
-      // Log successful registration
-      await this.logLoginAttempt({
-        email,
-        success: true,
-      });
-
-      return { user, token, refreshToken };
-    } catch (error) {
-      console.error('Registration failed:', error);
-      return null;
+    // Check if user already exists
+    const existingUser = await this.getUserByEmail(email);
+    if (existingUser) {
+      throw new Error('User already exists with this email');
     }
+
+    // Hash password
+    const passwordHash = await this.hashPassword(password);
+
+    // Generate email verification token
+    const emailVerificationToken = this.generateSecureToken();
+
+    // Create user
+    const query = `
+      INSERT INTO users (email, name, password_hash, email_verification_token, credits, is_active, email_verified, auth_provider, role)
+      VALUES ($1, $2, $3, $4, 15, true, false, 'email', 'user')
+      RETURNING id, email, name, credits, is_active, email_verified, role, auth_provider, created_at, updated_at
+    `;
+
+    const result = await databaseService.query(query, [email, name, passwordHash, emailVerificationToken]);
+    
+    if (result.rows.length === 0) {
+      throw new Error('Failed to create user');
+    }
+
+    const userData = result.rows[0];
+    const user: User = {
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      credits: userData.credits,
+      isActive: userData.is_active,
+      emailVerified: userData.email_verified,
+      role: userData.role,
+      authProvider: userData.auth_provider,
+      createdAt: userData.created_at,
+      updatedAt: userData.updated_at,
+    };
+
+    // Generate JWT tokens
+    const token = this.generateToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+
+    // Create session with both tokens
+    await this.createSession(user.id, token, undefined, undefined, refreshToken);
+
+    // Send email verification for new users (async, don't wait)
+    if (emailService.isEmailConfigured()) {
+      this.sendEmailVerificationToNewUser(user, emailVerificationToken).catch(error => {
+        console.error('Failed to send verification email to new user:', error);
+      });
+    }
+
+    // Log successful registration
+    await this.logLoginAttempt({
+      email,
+      success: true,
+    });
+
+    return { user, token, refreshToken };
   }
 
   /**
@@ -716,6 +719,35 @@ class AuthService {
     } catch (error) {
       console.error('Error finding or creating Google user:', error);
       return null;
+    }
+  }
+
+  /**
+   * Send email verification to newly registered user
+   */
+  private async sendEmailVerificationToNewUser(user: User, verificationToken: string): Promise<void> {
+    try {
+      if (!emailService.isEmailConfigured()) {
+        console.log('Email service not configured, skipping verification email');
+        return;
+      }
+
+      if (!process.env.FRONTEND_URL) {
+        throw new Error('FRONTEND_URL is not configured');
+      }
+      const frontendUrl = process.env.FRONTEND_URL;
+      const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+
+      await emailService.sendVerificationEmail({
+        userEmail: user.email,
+        userName: user.name,
+        verificationUrl: verificationUrl,
+      });
+
+      console.log(`Email verification sent to: ${user.email}`);
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      throw error;
     }
   }
 }

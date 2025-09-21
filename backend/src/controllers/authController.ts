@@ -429,8 +429,8 @@ export class AuthController {
       const { code } = req.query;
       
       if (!code) {
-        const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
-        const frontendUrl = frontendUrls[0].trim();
+        const frontendUrls = process.env.FRONTEND_URL?.split(',');
+        const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
         res.redirect(`${frontendUrl}/?error=oauth_no_code`);
         return;
       }
@@ -453,8 +453,8 @@ export class AuthController {
       const tokenData = await tokenResponse.json() as any;
       
       if (!tokenData.access_token) {
-        const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
-        const frontendUrl = frontendUrls[0].trim();
+        const frontendUrls = process.env.FRONTEND_URL?.split(',');
+        const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
         res.redirect(`${frontendUrl}/?error=oauth_token_failed`);
         return;
       }
@@ -469,8 +469,8 @@ export class AuthController {
       const profileData = await profileResponse.json() as any;
       
       if (!profileData.email) {
-        const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
-        const frontendUrl = frontendUrls[0].trim();
+        const frontendUrls = process.env.FRONTEND_URL?.split(',');
+        const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
         res.redirect(`${frontendUrl}/?error=oauth_no_email`);
         return;
       }
@@ -489,8 +489,8 @@ export class AuthController {
       const result = await authService.findOrCreateGoogleUser(googleProfile);
       
       if (!result) {
-        const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
-        const frontendUrl = frontendUrls[0].trim();
+        const frontendUrls = process.env.FRONTEND_URL?.split(',');
+        const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
         res.redirect(`${frontendUrl}/?error=oauth_user_creation_failed`);
         return;
       }
@@ -506,8 +506,8 @@ export class AuthController {
       await authService.createSession(user.id, token, ipAddress, req.get('User-Agent'), refreshToken);
 
       // Get the first frontend URL (for development, typically localhost:8080)
-      const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
-      const frontendUrl = frontendUrls[0].trim();
+  const frontendUrls = process.env.FRONTEND_URL?.split(',');
+  const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
 
       // Redirect to frontend with tokens and user info
       const redirectUrl = new URL(`${frontendUrl}/oauth/callback`);
@@ -525,8 +525,8 @@ export class AuthController {
       res.redirect(redirectUrl.toString());
     } catch (error) {
       console.error('Google OAuth callback error:', error);
-      const frontendUrls = process.env.FRONTEND_URL?.split(',') || ['http://localhost:8080'];
-      const frontendUrl = frontendUrls[0].trim();
+      const frontendUrls = process.env.FRONTEND_URL?.split(',');
+      const frontendUrl = (frontendUrls && frontendUrls[0]) ? frontendUrls[0].trim() : '';
       res.redirect(`${frontendUrl}/?error=oauth_callback_failed`);
     }
   }

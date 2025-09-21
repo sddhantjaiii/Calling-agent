@@ -5,7 +5,7 @@ Backend API for the AI Calling Agent SaaS platform. This Node.js/Express.js appl
 ## Features
 
 - **User Authentication**: Stack Auth integration with social login support
-- **Email Verification**: Gmail SMTP integration with automated verification workflows
+- **Email Verification**: ZeptoMail SMTP integration with automated verification workflows
 - **Agent Management**: Proxy to ElevenLabs API for agent configuration
 - **Call Processing**: Webhook handling for call data, transcripts, and analytics
 - **Contact Management**: Bulk upload and lookup functionality
@@ -44,7 +44,7 @@ src/
 - PostgreSQL database (Neon)
 - ElevenLabs API key
 - Stripe account (for payments)
-- Gmail account with App Password (for emails)
+- ZeptoMail account with API credentials (for emails)
 
 ### Installation
 

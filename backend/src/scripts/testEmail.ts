@@ -8,10 +8,12 @@
  */
 
 import dotenv from 'dotenv';
-import { emailService } from '../services/emailService';
 
-// Load environment variables
+// Load environment variables FIRST
 dotenv.config();
+
+// THEN import the email service
+import { emailService } from '../services/emailService';
 
 async function testEmailConfiguration() {
   console.log('🧪 Testing Email Configuration...\n');
@@ -22,9 +24,11 @@ async function testEmailConfiguration() {
 
   if (!isConfigured) {
     console.log('\n❌ Email service is not configured. Please check your environment variables:');
-    console.log('   - GMAIL_USER: Your Gmail address');
-    console.log('   - GMAIL_APP_PASSWORD: Your Gmail app password');
-    console.log('   - EMAIL_FROM: Email address to send from (optional, defaults to GMAIL_USER)');
+    console.log('   - ZEPTOMAIL_HOST: ZeptoMail SMTP host (smtp.zeptomail.in)');
+    console.log('   - ZEPTOMAIL_PORT: SMTP port (587 for TLS, 465 for SSL)');
+    console.log('   - ZEPTOMAIL_USER: ZeptoMail username (emailapikey)');
+    console.log('   - ZEPTOMAIL_PASSWORD: Your ZeptoMail API password');
+    console.log('   - EMAIL_FROM: Email address to send from (e.g., noreply@sniperthink.com)');
     console.log('\nSee docs/EMAIL_SETUP.md for detailed setup instructions.');
     process.exit(1);
   }
@@ -36,16 +40,17 @@ async function testEmailConfiguration() {
 
   if (!testResult) {
     console.log('\n❌ SMTP connection failed. Please check:');
-    console.log('   - Gmail credentials are correct');
-    console.log('   - App password is valid (not your regular password)');
-    console.log('   - 2-Factor Authentication is enabled on your Google account');
+    console.log('   - ZeptoMail credentials are correct');
+    console.log('   - API password is valid');
+    console.log('   - Domain is properly configured with ZeptoMail');
+    console.log('   - Network connectivity to smtp.zeptomail.in');
     process.exit(1);
   }
 
   // Send test email if requested
   const sendTestEmail = process.argv.includes('--send-test');
   if (sendTestEmail) {
-    const testEmail = process.env.TEST_EMAIL || process.env.GMAIL_USER;
+    const testEmail = process.env.TEST_EMAIL || process.env.EMAIL_FROM;
     
     if (!testEmail) {
       console.log('\n⚠️  No test email address provided. Use --send-test with TEST_EMAIL env var.');

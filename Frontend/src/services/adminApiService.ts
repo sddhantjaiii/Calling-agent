@@ -34,7 +34,7 @@ import type {
 } from '../types/admin';
 
 // Base API configuration
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api`;
+import { API_URL as API_BASE_URL } from '@/config/api';
 const ADMIN_API_BASE = `${API_BASE_URL}/admin`;
 
 // Admin API endpoints
@@ -732,7 +732,7 @@ class AdminApiService {
   }
 
   // Scheduled reports
-  async getScheduledReports(): Promise<any[]> {
+  async getScheduledReports(): Promise<ApiResponse<any[]>> {
     return adminRequest<any[]>(`${ADMIN_API_BASE}/reports/scheduled`);
   }
 
@@ -763,7 +763,7 @@ class AdminApiService {
   }
 
   // Report sharing
-  async getReportShares(reportId: string): Promise<any[]> {
+  async getReportShares(reportId: string): Promise<ApiResponse<any[]>> {
     return adminRequest<any[]>(`${ADMIN_API_BASE}/reports/${reportId}/shares`);
   }
 
@@ -788,14 +788,14 @@ class AdminApiService {
   }
 
   // Data export
-  async exportData(exportConfig: any): Promise<{ downloadUrl: string }> {
+  async exportData(exportConfig: any): Promise<ApiResponse<{ downloadUrl: string }>> {
     return adminRequest<{ downloadUrl: string }>(`${ADMIN_API_BASE}/export`, {
       method: 'POST',
       body: JSON.stringify(exportConfig),
     });
   }
 
-  async getExportHistory(): Promise<any[]> {
+  async getExportHistory(): Promise<ApiResponse<any[]>> {
     return adminRequest<any[]>(`${ADMIN_API_BASE}/export/history`);
   }
 

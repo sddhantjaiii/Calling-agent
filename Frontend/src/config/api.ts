@@ -2,7 +2,7 @@
 // This file configures the frontend to connect to the backend APIs
 
 // Determine API base URL based on environment
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   // Check for explicit environment variable first
   if (import.meta.env.VITE_API_BASE_URL) {
     console.log('Using VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
@@ -10,24 +10,27 @@ const getApiBaseUrl = () => {
   }
   
   // Production environment detection
-  if (import.meta.env.PROD || window.location.hostname.includes('vercel.app')) {
-    // IMPORTANT: You need to replace this with your actual backend URL
-    // The 405 errors happen because the frontend is trying to call APIs on itself
-    // instead of the backend server
-    console.warn('⚠️ Using placeholder backend URL. Please set VITE_API_BASE_URL environment variable in Vercel settings!');
-    
-    // For now, try to use the backend if it's deployed alongside
-    // This is a temporary fix - you should set the proper environment variable
-    return 'https://your-backend-domain.com'; // ⚠️ REPLACE WITH ACTUAL BACKEND URL
+  if (import.meta.env.PROD) {
+    console.warn('Using production mode. Ensure VITE_API_BASE_URL is configured in env.');
+    // If not configured, fall back to same-origin (works when backend is reverse-proxied)
+    const origin = window?.location?.origin;
+    if (origin) return origin;
   }
   
-  // Development fallback
-  console.log('Using development backend URL: http://localhost:3000');
-  return 'http://localhost:3000';
+  // No fallback: enforce env configuration to avoid hardcoding
+  const msg = 'VITE_API_BASE_URL is not configured. Please set it in Frontend/.env.';
+  console.error(msg);
+  throw new Error(msg);
 };
 
-const API_BASE_URL = getApiBaseUrl();
-const API_URL = `${API_BASE_URL}/api`;
+export const API_BASE_URL = getApiBaseUrl();
+export const API_URL = `${API_BASE_URL}/api`;
+
+// Helper to derive WebSocket base URL from API base (http->ws, https->wss)
+export const getWsBaseUrl = () => {
+  const base = getApiBaseUrl();
+  return base.replace(/^http/i, 'ws');
+};
 
 export const API_ENDPOINTS = {
   // Authentication
@@ -39,6 +42,7 @@ export const API_ENDPOINTS = {
     REFRESH: `${API_URL}/auth/refresh`,
     LOGOUT: `${API_URL}/auth/logout`,
     SESSION: `${API_URL}/auth/session`,
+    GOOGLE: `${API_URL}/auth/google`,
   },
 
   // Agents
@@ -201,6 +205,7 @@ export const API_ENDPOINTS = {
     VERIFY: `${API_URL}/email/verify`,
     SEND_PASSWORD_RESET: `${API_URL}/email/send-password-reset`,
     RESET_PASSWORD: `${API_URL}/email/reset-password`,
+    VALIDATE_RESET_TOKEN: `${API_URL}/email/validate-reset-token`,
     TEST: `${API_URL}/email/test`,
     ADMIN_SEND_REMINDERS: `${API_URL}/email/admin/send-verification-reminders`,
   },

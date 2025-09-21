@@ -31,28 +31,33 @@ class EmailService {
    * Initialize email transporter with Gmail SMTP
    */
   private initializeTransporter(): void {
-    const gmailUser = process.env.GMAIL_USER;
-    const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
-    const emailFrom = process.env.EMAIL_FROM || gmailUser;
+    const zeptomailHost = process.env.ZEPTOMAIL_HOST || 'smtp.zeptomail.in';
+    const zeptomailPort = parseInt(process.env.ZEPTOMAIL_PORT || '587');
+    const zeptomailUser = process.env.ZEPTOMAIL_USER || 'emailapikey';
+    const zeptomailPassword = process.env.ZEPTOMAIL_PASSWORD;
+    const emailFrom = process.env.EMAIL_FROM || 'noreply@sniperthink.com';
 
-    if (!gmailUser || !gmailAppPassword) {
-      console.warn('Gmail credentials not configured. Email functionality will be disabled.');
+    if (!zeptomailPassword) {
+      console.warn('ZeptoMail credentials not configured. Email functionality will be disabled.');
       return;
     }
 
     try {
       this.transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: zeptomailHost,
+        port: zeptomailPort,
+        secure: zeptomailPort === 465, // true for 465 (SSL), false for 587 (TLS)
         auth: {
-          user: gmailUser,
-          pass: gmailAppPassword,
+          user: zeptomailUser,
+          pass: zeptomailPassword,
         },
-        secure: true,
-        port: 465,
+        tls: {
+          rejectUnauthorized: false // Accept self-signed certificates
+        }
       });
 
       this.isConfigured = true;
-      console.log('Email service initialized successfully');
+      console.log('Email service initialized successfully with ZeptoMail');
     } catch (error) {
       console.error('Failed to initialize email service:', error);
       this.isConfigured = false;
@@ -69,7 +74,7 @@ class EmailService {
     }
 
     try {
-      const emailFrom = process.env.EMAIL_FROM || process.env.GMAIL_USER;
+      const emailFrom = process.env.EMAIL_FROM || 'noreply@sniperthink.com';
       
       const mailOptions = {
         from: `"AI Calling Agent Platform" <${emailFrom}>`,
@@ -122,7 +127,7 @@ class EmailService {
             <a href="${verificationUrl}" class="button">Verify Email Address</a>
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
             <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-            <p>This verification link will expire in 24 hours for security reasons.</p>
+            <p>This verification link will expire in 3 days for security reasons.</p>
             <p>If you didn't create an account with us, please ignore this email.</p>
           </div>
           <div class="footer">
@@ -143,7 +148,7 @@ class EmailService {
       
       ${verificationUrl}
       
-      This link will expire in 24 hours.
+  This link will expire in 3 days.
       
       If you didn't create an account with us, please ignore this email.
     `;

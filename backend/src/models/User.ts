@@ -415,6 +415,33 @@ export class UserModel extends BaseModel<UserInterface> {
       usersByProvider: stats.users_by_provider || {}
     };
   }
+
+  /**
+   * Set password reset token and expiry (hashed token stored)
+   */
+  async setPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date): Promise<UserInterface | null> {
+    return await this.update(userId, {
+      password_reset_token: tokenHash,
+      password_reset_expires: expiresAt,
+    });
+  }
+
+  /**
+   * Find user by password reset token hash
+   */
+  async findByPasswordResetToken(tokenHash: string): Promise<UserInterface | null> {
+    return await this.findOne({ password_reset_token: tokenHash } as Partial<UserInterface>);
+  }
+
+  /**
+   * Clear password reset token and expiry after use
+   */
+  async clearPasswordResetToken(userId: string): Promise<UserInterface | null> {
+    return await this.update(userId, {
+      password_reset_token: null,
+      password_reset_expires: null,
+    });
+  }
 }
 
 export default new UserModel();

@@ -28,6 +28,8 @@ import Communication from "./components/admin/Communication";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { queryClient } from "./lib/queryClient";
 import OAuthCallback from "./pages/OAuthCallback";
+import EmailVerificationPage from "./pages/EmailVerificationPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 // Lazy load admin components to fix object-to-primitive conversion error
 const LazyUserManagement = lazy(() => import('./components/admin/UserManagement/UserManagement'));
@@ -52,6 +54,8 @@ function App() {
                     <SuccessFeedbackProvider>
                     <Routes>
                       <Route path="/" element={<Index />} />
+                      <Route path="/verify-email" element={<EmailVerificationPage />} />
+                      <Route path="/reset-password" element={<ResetPasswordPage />} />
                       <Route
                         path="/dashboard"
                         element={

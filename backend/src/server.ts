@@ -25,12 +25,12 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+const FRONTEND_URL = process.env.FRONTEND_URL;
 
 // Parse multiple frontend URLs from environment variable
 const FRONTEND_URLS = process.env.FRONTEND_URL 
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
-  : ['http://localhost:8080'];
+  : [];
 
 // Setup global error handlers
 setupGlobalErrorHandlers();
@@ -76,20 +76,16 @@ app.use(cors({
     const corsOrigins = process.env.CORS_ORIGIN 
       ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
       : [];
-    
+
+    // In dev, optionally allow common localhost origins if DEV_ALLOW_LOCALHOST=true
+    const devLocalhost = (process.env.NODE_ENV !== 'production' && process.env.DEV_ALLOW_LOCALHOST === 'true')
+      ? ['http://localhost:8080','http://localhost:3000','http://127.0.0.1:8080','http://127.0.0.1:3000']
+      : [];
+
     const allowedOrigins = [
       ...FRONTEND_URLS,
       ...corsOrigins,
-      'http://localhost:8080',
-      'http://localhost:8081',
-      'http://localhost:8082', 
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://127.0.0.1:8080',
-      'http://127.0.0.1:8081',
-      'http://127.0.0.1:8082',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:3000'
+      ...devLocalhost
     ];
 
     // Remove duplicates from allowed origins
@@ -263,16 +259,14 @@ async function startServer() {
 
     logger.info('Server started successfully', startupInfo);
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📱 Frontend URL: ${FRONTEND_URL}`);
+  console.log(`📱 Frontend URL: ${FRONTEND_URL || '(not set)'}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔒 CORS Origins: ${[...new Set([
+    const printedCorsOrigins = [
       ...FRONTEND_URLS,
       ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(url => url.trim()) : []),
-      'http://localhost:8080',
-      'http://localhost:8081', 
-      'http://localhost:8082',
-      'http://localhost:5173'
-    ])].join(', ')}`);
+      ...((process.env.NODE_ENV !== 'production' && process.env.DEV_ALLOW_LOCALHOST === 'true') ? ['http://localhost:8080','http://localhost:8081','http://localhost:8082','http://localhost:5173'] : [])
+    ];
+    console.log(`🔒 CORS Origins: ${[...new Set(printedCorsOrigins)].join(', ')}`);
 
     // Start scheduled tasks
     try {

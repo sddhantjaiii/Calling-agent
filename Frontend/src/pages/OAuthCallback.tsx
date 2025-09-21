@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import API_ENDPOINTS from '@/config/api';
 
 const OAuthCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -85,7 +86,7 @@ const OAuthCallback: React.FC = () => {
       // Update user profile with company name (only if provided)
       if (companyName.trim()) {
         const token = localStorage.getItem('auth_token');
-        const response = await fetch('http://localhost:3000/api/user/profile', {
+        const response = await fetch(API_ENDPOINTS.USER.PROFILE, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

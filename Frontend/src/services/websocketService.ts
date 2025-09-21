@@ -62,6 +62,8 @@ export interface WebSocketMessage {
   timestamp: Date;
 }
 
+import { getWsBaseUrl } from '@/config/api';
+
 class WebSocketService extends EventEmitter {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
@@ -86,7 +88,8 @@ class WebSocketService extends EventEmitter {
       this.isConnecting = true;
       
       try {
-        const wsUrl = `${import.meta.env.VITE_WS_URL || 'ws://localhost:3000'}/admin/ws?token=${token}`;
+  const base = import.meta.env.VITE_WS_URL || getWsBaseUrl();
+  const wsUrl = `${base}/admin/ws?token=${token}`;
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {

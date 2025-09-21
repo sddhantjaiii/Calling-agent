@@ -17,12 +17,14 @@ interface FrontendPerformanceMetrics {
   duration: number;
   threshold: number;
   passed: boolean;
-  details?: unknown;
+  details?: any;
 }
+
+import { API_BASE_URL } from '@/config/api';
 
 class FrontendPerformanceValidator {
   private results: FrontendPerformanceMetrics[] = [];
-  private baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+  private baseUrl = API_BASE_URL;
 
   private async measureTime<T>(
     component: string,

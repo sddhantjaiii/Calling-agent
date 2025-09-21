@@ -11,6 +11,7 @@ router.post('/verify', EmailController.verifyEmail);
 // Password reset routes
 router.post('/send-password-reset', EmailController.sendPasswordReset);
 router.post('/reset-password', EmailController.resetPassword);
+router.post('/validate-reset-token', EmailController.validateResetToken);
 
 // Admin routes
 router.get('/test', requireAdmin, EmailController.testEmailConfig);
