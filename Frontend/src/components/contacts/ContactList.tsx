@@ -503,17 +503,17 @@ export const ContactList: React.FC<ContactListProps> = ({
                       onClick={() => onContactSelect?.(contact)}
                     >
                       <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {contact.name}
+                        <div>
+                          <div>{contact.name}</div>
                           {contact.isAutoCreated && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              Auto-created
-                            </span>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Auto created and linked to call
+                            </div>
                           )}
                           {contact.callLinkType === 'manually_linked' && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Linked to call
-                            </span>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Manually linked to call
+                            </div>
                           )}
                         </div>
                       </TableCell>

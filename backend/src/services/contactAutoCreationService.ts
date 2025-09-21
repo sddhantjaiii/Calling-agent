@@ -15,6 +15,35 @@ export interface ContactCreationResult {
  */
 export class ContactAutoCreationService {
   /**
+   * Normalize phone number format to [ISD code] [space] [rest of the number]
+   * Takes last 10 digits as number and other digits at front as ISD codes
+   */
+  private static normalizePhoneNumber(phoneNumber: string): string {
+    // Remove all non-digit characters except +
+    const cleaned = phoneNumber.replace(/[^\d+]/g, '');
+    
+    // Remove leading + to work with digits only
+    const digitsOnly = cleaned.replace(/^\+/, '');
+    
+    // Basic validation - should have at least 10 digits
+    if (digitsOnly.length < 10) {
+      throw new Error('Invalid phone number format');
+    }
+    
+    // Take last 10 digits as the main number
+    const mainNumber = digitsOnly.slice(-10);
+    
+    // Take everything before the last 10 digits as ISD code
+    const isdCode = digitsOnly.slice(0, -10);
+    
+    // If no ISD code found, default to +91 (India)
+    const finalIsdCode = isdCode || '91';
+    
+    // Return formatted as +[ISD] [main number]
+    return `+${finalIsdCode} ${mainNumber}`;
+  }
+
+  /**
    * Create or update contact from webhook extraction data
    * 
    * @param userId - The user ID who owns the contact
@@ -202,7 +231,7 @@ export class ContactAutoCreationService {
         userId,
         leadData.extractedName || null,
         leadData.extractedEmail || null,
-        phoneNumber || null,
+        phoneNumber ? this.normalizePhoneNumber(phoneNumber) : null,
         leadData.companyName || null,
         notes,
         callId, // auto_created_from_call_id
@@ -263,7 +292,7 @@ export class ContactAutoCreationService {
 
       if (phoneNumber) {
         updateFields.push(`phone_number = COALESCE(NULLIF(phone_number, ''), $${paramIndex})`);
-        values.push(phoneNumber);
+        values.push(this.normalizePhoneNumber(phoneNumber));
         paramIndex++;
       }
 

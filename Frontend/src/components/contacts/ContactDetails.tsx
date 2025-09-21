@@ -103,17 +103,17 @@ export const ContactDetails: React.FC<ContactDetailsProps> = ({
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Contacts
           </Button>
-          <div className="flex items-center gap-3">
+          <div>
             <h1 className="text-2xl font-bold">{contact.name}</h1>
             {contact.isAutoCreated && (
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                Auto-created from call
-              </Badge>
+              <p className="text-sm text-muted-foreground mt-1">
+                Auto created and linked to call
+              </p>
             )}
             {contact.callLinkType === 'manually_linked' && (
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                Linked to call
-              </Badge>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manually linked to call
+              </p>
             )}
           </div>
         </div>

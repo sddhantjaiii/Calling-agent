@@ -38,12 +38,33 @@ export const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({
   useEffect(() => {
     if (value) {
       // Try to extract country code from the value
+      // Handle both formats: "+91 8979556941" and "+918979556941"
       const match = value.match(/^(\+\d{1,4})\s*(.*)$/);
       if (match) {
-        setCountryCode(match[1]);
-        setPhoneNumber(match[2]);
+        const extractedCountryCode = match[1];
+        const remainingNumber = match[2];
+        
+        // If there's no space and we have a long string, try to identify common country codes
+        if (!remainingNumber || remainingNumber.length === 0) {
+          // Try to split common country codes like +91, +1, +44, etc.
+          const commonCodes = ['+91', '+1', '+44', '+33', '+49', '+86', '+81', '+61', '+82'];
+          for (const code of commonCodes) {
+            if (value.startsWith(code)) {
+              setCountryCode(code);
+              setPhoneNumber(value.substring(code.length));
+              return;
+            }
+          }
+          // Fallback: assume it's just the phone number
+          setCountryCode('+91');
+          setPhoneNumber(value);
+        } else {
+          setCountryCode(extractedCountryCode);
+          setPhoneNumber(remainingNumber);
+        }
       } else {
         // If no country code found, assume it's just the phone number
+        setCountryCode('+91');
         setPhoneNumber(value);
       }
     } else {

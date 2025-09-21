@@ -8,6 +8,35 @@ import { AnalyticsService } from './analyticsService';
 import { TranscriptService } from './transcriptService';
 import { logger } from '../utils/logger';
 
+/**
+ * Normalize phone number format to [ISD code] [space] [rest of the number]
+ * Takes last 10 digits as number and other digits at front as ISD codes
+ */
+function normalizePhoneNumber(phoneNumber: string): string {
+  // Remove all non-digit characters except +
+  const cleaned = phoneNumber.replace(/[^\d+]/g, '');
+  
+  // Remove leading + to work with digits only
+  const digitsOnly = cleaned.replace(/^\+/, '');
+  
+  // Basic validation - should have at least 10 digits
+  if (digitsOnly.length < 10) {
+    throw new Error('Invalid phone number format');
+  }
+  
+  // Take last 10 digits as the main number
+  const mainNumber = digitsOnly.slice(-10);
+  
+  // Take everything before the last 10 digits as ISD code
+  const isdCode = digitsOnly.slice(0, -10);
+  
+  // If no ISD code found, default to +91 (India)
+  const finalIsdCode = isdCode || '91';
+  
+  // Return formatted as +[ISD] [main number]
+  return `+${finalIsdCode} ${mainNumber}`;
+}
+
 // Final ElevenLabs Webhook Payload Interface - Based on actual received format
 export interface ElevenLabsWebhookPayload {
   conversation_id: string;
@@ -734,7 +763,7 @@ class WebhookService {
           agent_id: agent.id,
           user_id: agent.user_id,
           elevenlabs_conversation_id: payload.conversation_id,
-          phone_number: callerPhoneNumber,
+          phone_number: normalizePhoneNumber(callerPhoneNumber),
           caller_name: callerName,
           caller_email: callerEmail,
           call_source: 'phone',

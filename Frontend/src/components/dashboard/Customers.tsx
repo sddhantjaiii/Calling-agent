@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import {
   Search,
   Download,
@@ -51,7 +52,7 @@ interface Customer {
   email?: string;
   phone?: string;
   company?: string;
-  status: 'active' | 'inactive';
+  status: 'Active' | 'Inactive' | 'Churned' | 'On Hold';
   last_interaction_date?: string;
   conversion_date: string;
   notes?: string;
@@ -103,17 +104,26 @@ interface CustomersProps {
 
 const Customers = ({}: CustomersProps) => {
   const { theme } = useTheme();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   
   // Edit notes state
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editedNotes, setEditedNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [selectedCustomerForNotes, setSelectedCustomerForNotes] = useState<Customer | null>(null);
+
+  // Edit sales rep state
+  const [editingSalesRep, setEditingSalesRep] = useState<string | null>(null);
+  const [editedSalesRep, setEditedSalesRep] = useState("");
+  const [savingSalesRep, setSavingSalesRep] = useState(false);
 
   // Customer detail view state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -231,7 +241,8 @@ const Customers = ({}: CustomersProps) => {
 
   const handleToggleStatus = async (customer: Customer, isActive: boolean) => {
     try {
-      const newStatus = isActive ? 'active' : 'inactive';
+      setUpdatingStatus(customer.id);
+      const newStatus = isActive ? 'Active' : 'Inactive';
       
       // Optimistically update the local state
       setCustomers(prevCustomers => 
@@ -243,11 +254,21 @@ const Customers = ({}: CustomersProps) => {
       );
       
       // Call API to update status
-      await apiService.updateCustomer(customer.id, {
+      const response = await apiService.updateCustomer(customer.id, {
         status: newStatus
       });
       
-    } catch (error) {
+      if (response?.success) {
+        toast({
+          title: "Status Updated",
+          description: `Customer status changed to ${newStatus}`,
+          variant: "default",
+        });
+      } else {
+        throw new Error(typeof response?.error === 'string' ? response.error : 'Failed to update customer status');
+      }
+      
+    } catch (error: any) {
       console.error('Error updating customer status:', error);
       
       // Revert the optimistic update on error
@@ -258,61 +279,157 @@ const Customers = ({}: CustomersProps) => {
             : c
         ) : []
       );
+      
+      // Show error toast
+      toast({
+        title: "Error",
+        description: error?.message || error?.error || 'Failed to update customer status',
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
   const handleEditNotes = (customer: Customer) => {
-    setEditingNotes(customer.id);
+    setSelectedCustomerForNotes(customer);
     setEditedNotes(customer.notes || "");
+    setNotesModalOpen(true);
   };
 
-  const handleSaveNotes = async (customer: Customer) => {
+  const handleSaveNotes = async () => {
+    if (!selectedCustomerForNotes) return;
+    
     try {
       setSavingNotes(true);
       
       // Optimistically update the local state
       setCustomers(prevCustomers => 
         Array.isArray(prevCustomers) ? prevCustomers.map(c => 
-          c.id === customer.id 
+          c.id === selectedCustomerForNotes.id 
             ? { ...c, notes: editedNotes }
             : c
         ) : []
       );
       
       // Call API to update notes
-      await apiService.updateCustomer(customer.id, {
+      const response = await apiService.updateCustomer(selectedCustomerForNotes.id, {
         notes: editedNotes
       });
       
-      setEditingNotes(null);
-      setEditedNotes("");
-    } catch (error) {
+      if (response?.success) {
+        toast({
+          title: "Notes Updated",
+          description: "Customer notes saved successfully",
+          variant: "default",
+        });
+        setNotesModalOpen(false);
+        setSelectedCustomerForNotes(null);
+      } else {
+        throw new Error(typeof response?.error === 'string' ? response.error : 'Failed to update notes');
+      }
+      
+    } catch (error: any) {
       console.error('Error updating customer notes:', error);
       
       // Revert the optimistic update on error
       setCustomers(prevCustomers => 
         Array.isArray(prevCustomers) ? prevCustomers.map(c => 
-          c.id === customer.id 
-            ? { ...c, notes: customer.notes }
+          c.id === selectedCustomerForNotes.id 
+            ? { ...c, notes: selectedCustomerForNotes.notes }
             : c
         ) : []
       );
+      
+      toast({
+        title: "Error",
+        description: error?.message || error?.error || 'Failed to update notes',
+        variant: "destructive",
+      });
     } finally {
       setSavingNotes(false);
     }
   };
 
   const handleCancelEdit = () => {
-    setEditingNotes(null);
+    setNotesModalOpen(false);
+    setSelectedCustomerForNotes(null);
     setEditedNotes("");
   };
 
+  const handleEditSalesRep = (customer: Customer) => {
+    setEditingSalesRep(customer.id);
+    setEditedSalesRep(customer.assigned_sales_rep || "");
+  };
+
+  const handleSaveSalesRep = async (customer: Customer) => {
+    try {
+      setSavingSalesRep(true);
+      
+      // Optimistically update the local state
+      setCustomers(prevCustomers => 
+        Array.isArray(prevCustomers) ? prevCustomers.map(c => 
+          c.id === customer.id 
+            ? { ...c, assigned_sales_rep: editedSalesRep }
+            : c
+        ) : []
+      );
+      
+      // Call API to update sales rep
+      const response = await apiService.updateCustomer(customer.id, {
+        assignedSalesRep: editedSalesRep
+      });
+      
+      if (response?.success) {
+        toast({
+          title: "Sales Rep Updated",
+          description: "Sales representative assigned successfully",
+          variant: "default",
+        });
+        setEditingSalesRep(null);
+        setEditedSalesRep("");
+      } else {
+        throw new Error(typeof response?.error === 'string' ? response.error : 'Failed to update sales rep');
+      }
+      
+    } catch (error: any) {
+      console.error('Error updating sales rep:', error);
+      
+      // Revert the optimistic update on error
+      setCustomers(prevCustomers => 
+        Array.isArray(prevCustomers) ? prevCustomers.map(c => 
+          c.id === customer.id 
+            ? { ...c, assigned_sales_rep: customer.assigned_sales_rep }
+            : c
+        ) : []
+      );
+      
+      toast({
+        title: "Error",
+        description: error?.message || error?.error || 'Failed to update sales rep',
+        variant: "destructive",
+      });
+    } finally {
+      setSavingSalesRep(false);
+    }
+  };
+
+  const handleCancelSalesRepEdit = () => {
+    setEditingSalesRep(null);
+    setEditedSalesRep("");
+  };
+
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const lowerStatus = status.toLowerCase();
+    switch (lowerStatus) {
       case "active":
         return "border-green-500 text-green-700 bg-green-50 dark:bg-green-950 dark:text-green-300";
       case "inactive":
         return "border-red-500 text-red-700 bg-red-50 dark:bg-red-950 dark:text-red-300";
+      case "churned":
+        return "border-red-600 text-red-800 bg-red-100 dark:bg-red-900 dark:text-red-200";
+      case "on hold":
+        return "border-yellow-500 text-yellow-700 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-300";
       default:
         return "border-gray-500 text-gray-700 bg-gray-50 dark:bg-gray-950 dark:text-gray-300";
     }
@@ -495,7 +612,6 @@ const Customers = ({}: CustomersProps) => {
                         <TableHead className="min-w-[120px]">Budget</TableHead>
                         <TableHead className="min-w-[100px]">Urgency</TableHead>
                         <TableHead className="min-w-[100px]">Fit</TableHead>
-                        <TableHead className="min-w-[80px]">Score</TableHead>
                         <TableHead className="min-w-[150px]">CTA Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -573,21 +689,6 @@ const Customers = ({}: CustomersProps) => {
                             >
                               {entry.fitAlignment || 'Unknown'}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <div className="w-12 bg-muted rounded-full h-2">
-                                <div
-                                  className={cn(
-                                    "h-2 rounded-full",
-                                    entry.totalScore >= 70 ? "bg-green-600" :
-                                    entry.totalScore >= 40 ? "bg-yellow-600" : "bg-red-600"
-                                  )}
-                                  style={{ width: `${entry.totalScore || 0}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-medium">{entry.totalScore || 0}</span>
-                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
@@ -676,8 +777,10 @@ const Customers = ({}: CustomersProps) => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Inactive">Inactive</SelectItem>
+            <SelectItem value="Churned">Churned</SelectItem>
+            <SelectItem value="On Hold">On Hold</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -708,6 +811,7 @@ const Customers = ({}: CustomersProps) => {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Company</TableHead>
+              <TableHead>Sales Rep</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Interaction</TableHead>
               <TableHead>Conversion Date</TableHead>
@@ -736,11 +840,6 @@ const Customers = ({}: CustomersProps) => {
                   <div className="font-medium text-foreground">
                     {customer.name}
                   </div>
-                  {customer.assigned_sales_rep && (
-                    <div className="text-sm text-muted-foreground">
-                      Rep: {customer.assigned_sales_rep}
-                    </div>
-                  )}
                 </TableCell>
                 <TableCell>
                   {customer.email ? (
@@ -773,16 +872,71 @@ const Customers = ({}: CustomersProps) => {
                   )}
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
+                  {editingSalesRep === customer.id ? (
+                    <div className="flex items-center gap-2 max-w-xs">
+                      <Input
+                        value={editedSalesRep}
+                        onChange={(e) => setEditedSalesRep(e.target.value)}
+                        placeholder="Enter sales rep name..."
+                        className="h-8 text-sm"
+                      />
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveSalesRep(customer)}
+                          disabled={savingSalesRep}
+                          className="h-6 w-6 p-0"
+                        >
+                          {savingSalesRep ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Save className="w-3 h-3" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCancelSalesRepEdit}
+                          className="h-6 w-6 p-0"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 max-w-xs">
+                      <div className="flex-1 text-sm">
+                        {customer.assigned_sales_rep || (
+                          <span className="text-muted-foreground">Not assigned</span>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditSalesRep(customer)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
                     <Switch
-                      checked={customer.status === 'active'}
+                      checked={customer.status.toLowerCase() === 'active'}
                       onCheckedChange={(checked) =>
                         handleToggleStatus(customer, checked)
                       }
+                      disabled={updatingStatus === customer.id}
                       className={cn(
-                        "h-5 w-9 data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-700"
+                        "h-5 w-9 data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-700",
+                        updatingStatus === customer.id && "opacity-50"
                       )}
                     />
+                    {updatingStatus === customer.id && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
                     <Badge
                       variant="outline"
                       className={getStatusColor(customer.status)}
@@ -802,52 +956,19 @@ const Customers = ({}: CustomersProps) => {
                   {format(new Date(customer.conversion_date), 'MMM dd, yyyy')}
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  {editingNotes === customer.id ? (
-                    <div className="flex items-center gap-2 max-w-xs">
-                      <Textarea
-                        value={editedNotes}
-                        onChange={(e) => setEditedNotes(e.target.value)}
-                        className="min-h-[60px] text-sm"
-                        placeholder="Add notes..."
-                      />
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          size="sm"
-                          onClick={() => handleSaveNotes(customer)}
-                          disabled={savingNotes}
-                          className="h-6 w-6 p-0"
-                        >
-                          {savingNotes ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Save className="w-3 h-3" />
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handleCancelEdit}
-                          className="h-6 w-6 p-0"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
+                  <div className="flex items-center gap-2 max-w-xs">
+                    <div className="flex-1 text-sm text-muted-foreground truncate">
+                      {customer.notes || "No notes"}
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2 max-w-xs">
-                      <div className="flex-1 text-sm text-muted-foreground truncate">
-                        {customer.notes || "No notes"}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditNotes(customer)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditNotes(customer)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -919,6 +1040,59 @@ const Customers = ({}: CustomersProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Notes Editing Modal */}
+      <Dialog open={notesModalOpen} onOpenChange={setNotesModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Customer Notes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="customer-name" className="text-sm font-medium">
+                Customer: {selectedCustomerForNotes?.name}
+              </Label>
+            </div>
+            <div>
+              <Label htmlFor="notes" className="text-sm font-medium">
+                Notes
+              </Label>
+              <Textarea
+                id="notes"
+                value={editedNotes}
+                onChange={(e) => setEditedNotes(e.target.value)}
+                placeholder="Add notes about this customer..."
+                className="min-h-[120px] mt-2"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancelEdit}
+                disabled={savingNotes}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveNotes}
+                disabled={savingNotes}
+              >
+                {savingNotes ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Notes
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../services/apiService';
 import { queryKeys, cacheUtils } from '../lib/queryClient';
 import { useAuth } from '../contexts/AuthContext';
+import { toCamelCase } from '../utils/caseConverter'; // Import the converter
 import type { 
   Contact, 
   CreateContactRequest, 
@@ -87,14 +88,22 @@ export const useContacts = (initialOptions?: ContactsListOptions): UseContactsRe
       const response = await apiService.getContacts(initialOptions);
       
       // Handle both paginated and non-paginated responses
+      let contactsData;
       if (response.data && 'contacts' in response.data) {
-        return response.data;
+        contactsData = response.data;
       } else {
-        return {
+        contactsData = {
           contacts: response.data || response as unknown as Contact[],
           pagination: null
         };
       }
+
+      // Convert snake_case keys to camelCase
+      if (contactsData.contacts) {
+        contactsData.contacts = contactsData.contacts.map(contact => toCamelCase(contact));
+      }
+
+      return contactsData;
     },
     staleTime: 1 * 60 * 1000, // 1 minute - contacts change frequently
     gcTime: 3 * 60 * 1000, // 3 minutes
@@ -126,7 +135,8 @@ export const useContacts = (initialOptions?: ContactsListOptions): UseContactsRe
   const createContactMutation = useMutation({
     mutationFn: async (data: CreateContactRequest) => {
       const response = await apiService.createContact(data);
-      return response.data || response as unknown as Contact;
+      const contact = response.data || response as unknown as Contact;
+      return toCamelCase(contact);
     },
     onMutate: async (newContact) => {
       // Cancel any outgoing refetches
@@ -139,12 +149,13 @@ export const useContacts = (initialOptions?: ContactsListOptions): UseContactsRe
       if (previousData && 'contacts' in previousData) {
         const optimisticContact: Contact = {
           id: `temp-${Date.now()}`,
-          userId: '',
+          userId: user?.id || '',
           name: newContact.name,
           phoneNumber: newContact.phoneNumber,
           email: newContact.email,
           company: newContact.company,
           notes: newContact.notes,
+          isAutoCreated: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -174,7 +185,8 @@ export const useContacts = (initialOptions?: ContactsListOptions): UseContactsRe
   const updateContactMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateContactRequest }) => {
       const response = await apiService.updateContact(id, data);
-      return response.data || response as unknown as Contact;
+      const contact = response.data || response as unknown as Contact;
+      return toCamelCase(contact);
     },
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.contacts(user?.id) });

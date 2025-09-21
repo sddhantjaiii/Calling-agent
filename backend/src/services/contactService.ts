@@ -273,26 +273,32 @@ export class ContactService {
   }
 
   /**
-   * Normalize phone number format
+   * Normalize phone number format to [ISD code] [space] [rest of the number]
+   * Takes last 10 digits as number and other digits at front as ISD codes
    */
   private static normalizePhoneNumber(phoneNumber: string): string {
-    // Remove all non-digit characters
-    const digitsOnly = phoneNumber.replace(/\D/g, '');
+    // Remove all non-digit characters except +
+    const cleaned = phoneNumber.replace(/[^\d+]/g, '');
+    
+    // Remove leading + to work with digits only
+    const digitsOnly = cleaned.replace(/^\+/, '');
     
     // Basic validation - should have at least 10 digits
     if (digitsOnly.length < 10) {
       throw new Error('Invalid phone number format');
     }
     
-    // For US numbers, ensure they start with country code
-    if (digitsOnly.length === 10) {
-      return `+1${digitsOnly}`;
-    } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
-      return `+${digitsOnly}`;
-    } else {
-      // For international numbers, add + if not present
-      return digitsOnly.startsWith('+') ? digitsOnly : `+${digitsOnly}`;
-    }
+    // Take last 10 digits as the main number
+    const mainNumber = digitsOnly.slice(-10);
+    
+    // Take everything before the last 10 digits as ISD code
+    const isdCode = digitsOnly.slice(0, -10);
+    
+    // If no ISD code found, default to +91 (India)
+    const finalIsdCode = isdCode || '91';
+    
+    // Return formatted as +[ISD] [main number]
+    return `+${finalIsdCode} ${mainNumber}`;
   }
 
   /**
