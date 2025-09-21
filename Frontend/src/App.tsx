@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Suspense, lazy } from 'react';
 import React from 'react';
 import { Toaster } from "sonner";
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { ThemeProvider } from "./components/theme/ThemeProvider";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AgentProvider } from "./contexts/AgentContext";
@@ -158,6 +159,7 @@ function App() {
           </Router>
         </Suspense>
         <Toaster />
+        <SpeedInsights />
       </QueryClientProvider>
     </ErrorBoundary>
   );
