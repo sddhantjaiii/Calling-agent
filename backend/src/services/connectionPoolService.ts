@@ -30,6 +30,8 @@ export class ConnectionPoolService {
   private healthCheckInterval: any | null = null;
   private config: ConnectionPoolConfig;
   private isShuttingDown: boolean = false;
+  // Session timezone to use for all DB connections; default to IST
+  private sessionTimeZone: string = (process.env.DB_TIMEZONE || 'Asia/Kolkata').trim();
 
   constructor(config: ConnectionPoolConfig) {
     this.config = {
@@ -81,9 +83,15 @@ export class ConnectionPoolService {
         waitingCount: this.pool.waitingCount
       });
 
-      // Enforce IST for this session
-      client.query("SET TIME ZONE 'Asia/Kolkata'").catch((err) => {
-        logger.warn('Failed to set session time zone to Asia/Kolkata', { error: err?.message });
+      // Enforce session time zone (default Asia/Kolkata). Validate input to avoid SQL issues.
+      const tz = this.sessionTimeZone;
+      const tzIsValid = /^[A-Za-z_\/+-:]{1,64}$/.test(tz);
+      const tzSql = tzIsValid ? tz : 'Asia/Kolkata';
+      if (!tzIsValid) {
+        logger.warn('Invalid DB_TIMEZONE provided, falling back to Asia/Kolkata', { provided: tz });
+      }
+      client.query(`SET TIME ZONE '${tzSql}'`).catch((err) => {
+        logger.warn('Failed to set session time zone', { tz: tzSql, error: err?.message });
       });
     });
 
