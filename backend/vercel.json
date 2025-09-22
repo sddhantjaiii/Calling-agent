@@ -1,0 +1,10 @@
+{
+  "env": {
+    "TZ": "Asia/Kolkata"
+  },
+  "functions": {
+    "src/server.ts": {
+      "maxDuration": 30
+    }
+  }
+}

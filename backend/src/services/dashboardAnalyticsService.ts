@@ -183,12 +183,17 @@ export class DashboardAnalyticsService {
   /**
    * Optimized leads over time query with indexed date ranges
    * Requirements: 2.2 - indexed date queries with proper date range filtering
+   * Using timezone-aware date calculations for consistent IST results
    */
   private static async getOptimizedLeadsOverTime(userId: string): Promise<AnalyticsTimeSeriesData[]> {
     try {
       const query = `
         WITH series AS (
-          SELECT generate_series((CURRENT_DATE - INTERVAL '6 days')::date, CURRENT_DATE::date, interval '1 day') AS day
+          SELECT generate_series(
+            (NOW() AT TIME ZONE 'Asia/Kolkata' - INTERVAL '6 days')::date, 
+            (NOW() AT TIME ZONE 'Asia/Kolkata')::date, 
+            interval '1 day'
+          ) AS day
         )
         SELECT 
           s.day AS date,
@@ -196,7 +201,7 @@ export class DashboardAnalyticsService {
         FROM series s
         LEFT JOIN calls c
           ON c.user_id = $1
-         AND DATE(c.created_at) = s.day
+         AND DATE(c.created_at AT TIME ZONE 'Asia/Kolkata') = s.day
         LEFT JOIN lead_analytics la
           ON la.call_id = c.id
         GROUP BY s.day
@@ -226,12 +231,17 @@ export class DashboardAnalyticsService {
   /**
    * Optimized interactions over time query with indexed date ranges
    * Requirements: 2.2 - indexed date queries with proper date range filtering
+   * Using timezone-aware date calculations for consistent IST results
    */
   private static async getOptimizedInteractionsOverTime(userId: string): Promise<AnalyticsInteractionData[]> {
     try {
       const query = `
         WITH series AS (
-          SELECT generate_series((CURRENT_DATE - INTERVAL '6 days')::date, CURRENT_DATE::date, interval '1 day') AS day
+          SELECT generate_series(
+            (NOW() AT TIME ZONE 'Asia/Kolkata' - INTERVAL '6 days')::date, 
+            (NOW() AT TIME ZONE 'Asia/Kolkata')::date, 
+            interval '1 day'
+          ) AS day
         )
         SELECT 
           s.day AS date,
@@ -239,7 +249,7 @@ export class DashboardAnalyticsService {
         FROM series s
         LEFT JOIN calls c
           ON c.user_id = $1
-         AND DATE(c.created_at) = s.day
+         AND DATE(c.created_at AT TIME ZONE 'Asia/Kolkata') = s.day
         GROUP BY s.day
         ORDER BY s.day ASC
       `;
@@ -342,6 +352,7 @@ export class DashboardAnalyticsService {
   private static async getOptimizedAgentPerformance(userId: string): Promise<AgentPerformanceData[]> {
     try {
       // Use pre-aggregated data from agent_analytics table for better performance
+      // Using timezone-aware date filtering for consistent IST results
       const query = `
         SELECT 
           a.name,
@@ -358,7 +369,7 @@ export class DashboardAnalyticsService {
           FROM agent_analytics
           WHERE user_id = $1 
             AND hour IS NULL
-            AND date >= CURRENT_DATE - INTERVAL '30 days'
+            AND date >= (NOW() AT TIME ZONE 'Asia/Kolkata' - INTERVAL '30 days')::date
           GROUP BY agent_id
         ) aa ON a.id = aa.agent_id
         WHERE a.user_id = $1
@@ -383,6 +394,7 @@ export class DashboardAnalyticsService {
 
   /**
    * Get aggregated statistics for derived calculations
+   * Using timezone-aware date filtering for consistent IST results
    */
   private static async getAggregatedStats(userId: string): Promise<any> {
     try {
@@ -395,7 +407,7 @@ export class DashboardAnalyticsService {
         FROM calls c
         LEFT JOIN lead_analytics la ON c.id = la.call_id
         WHERE c.user_id = $1
-          AND c.created_at >= CURRENT_DATE - INTERVAL '30 days'
+          AND c.created_at >= (NOW() AT TIME ZONE 'Asia/Kolkata' - INTERVAL '30 days')
       `;
 
       const result = await this.executeQueryWithTimeout(query, [userId], this.QUERY_TIMEOUT);
@@ -582,17 +594,18 @@ export class DashboardAnalyticsService {
 
   /**
    * Get weekly success rates with optimized query
+   * Using timezone-aware date filtering for consistent IST results
    */
   private static async getWeeklySuccessRates(userId: string): Promise<number[]> {
     try {
       const query = `
         SELECT 
-          EXTRACT(WEEK FROM created_at) as week,
+          EXTRACT(WEEK FROM created_at AT TIME ZONE 'Asia/Kolkata') as week,
           COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*) as success_rate
         FROM calls
         WHERE user_id = $1 
-          AND created_at >= CURRENT_DATE - INTERVAL '4 weeks'
-        GROUP BY EXTRACT(WEEK FROM created_at)
+          AND created_at >= (NOW() AT TIME ZONE 'Asia/Kolkata' - INTERVAL '4 weeks')
+        GROUP BY EXTRACT(WEEK FROM created_at AT TIME ZONE 'Asia/Kolkata')
         ORDER BY week DESC
         LIMIT 4
       `;
@@ -615,6 +628,7 @@ export class DashboardAnalyticsService {
   /**
    * Get enhanced CTA metrics using dedicated boolean columns
    * Requirements: US-2.1 - Enhanced CTA metrics from new columns
+   * Using timezone-aware date filtering for consistent IST results
    */
   static async getEnhancedCTAMetrics(userId: string): Promise<any> {
     try {
@@ -630,7 +644,7 @@ export class DashboardAnalyticsService {
         FROM lead_analytics la
         JOIN calls c ON la.call_id = c.id
         WHERE c.user_id = $1 
-          AND c.created_at >= CURRENT_DATE - INTERVAL '30 days'
+          AND c.created_at >= (NOW() AT TIME ZONE 'Asia/Kolkata' - INTERVAL '30 days')
       `;
 
       const result = await this.executeQueryWithTimeout(query, [userId], this.QUERY_TIMEOUT);
@@ -662,6 +676,7 @@ export class DashboardAnalyticsService {
   /**
    * Get company lead breakdown using company_name column
    * Requirements: US-2.1 - Company-based lead analysis
+   * Using timezone-aware date filtering for consistent IST results
    */
   static async getCompanyLeadBreakdown(userId: string): Promise<any[]> {
     try {
@@ -676,7 +691,7 @@ export class DashboardAnalyticsService {
         WHERE c.user_id = $1 
           AND la.company_name IS NOT NULL 
           AND la.company_name != ''
-          AND c.created_at >= CURRENT_DATE - INTERVAL '30 days'
+          AND c.created_at >= (NOW() AT TIME ZONE 'Asia/Kolkata' - INTERVAL '30 days')
         GROUP BY la.company_name
         ORDER BY lead_count DESC
         LIMIT 10

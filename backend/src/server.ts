@@ -23,6 +23,12 @@ import { webhookRetryService } from './services/webhookRetryService';
 // Load environment variables
 dotenv.config();
 
+// Set timezone for the Node.js process - critical for Vercel deployment
+// This ensures all Date operations use IST instead of UTC
+process.env.TZ = process.env.TZ || 'Asia/Kolkata';
+logger.info(`Application timezone set to: ${process.env.TZ}`);
+console.log(`🌍 Application timezone set to: ${process.env.TZ}`);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL;
