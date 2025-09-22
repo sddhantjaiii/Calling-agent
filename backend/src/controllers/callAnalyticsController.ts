@@ -39,13 +39,15 @@ export class CallAnalyticsController {
             THEN (COUNT(DISTINCT c.id) FILTER (WHERE c.duration_seconds < 20) * 100.0 / COUNT(DISTINCT c.id))
             ELSE 0 
           END as call_drop_off_rate,
-          COUNT(DISTINCT c.id) FILTER (WHERE c.status = 'failed' OR c.status = 'cancelled') as missed_calls,
+          -- Not Connected: sum of not_connected column from contacts table (Twilio unanswered calls)
+          COALESCE(SUM(DISTINCT ct.not_connected), 0) as not_connected_calls,
           COUNT(DISTINCT c.id) FILTER (WHERE la.cta_interactions->>'demo_clicked' = 'true') as demos_scheduled,
           -- Hot leads: based on lead_status_tag indicating Hot
           COUNT(DISTINCT c.id) FILTER (WHERE COALESCE(la.lead_status_tag,'') ILIKE 'hot%') as hot_leads_generated,
           -- Pending follow-ups: flexible match for tag variants like 'Follow-Up Later'
           COUNT(DISTINCT c.id) FILTER (WHERE COALESCE(la.lead_status_tag,'') ILIKE 'follow%later%') as pending_followups
         FROM calls c
+        LEFT JOIN contacts ct ON c.contact_id = ct.id
         LEFT JOIN lead_analytics la ON c.id = la.call_id AND la.user_id = c.user_id
         WHERE c.user_id = $1 
           AND c.created_at >= $2 
@@ -106,7 +108,7 @@ export class CallAnalyticsController {
       const avgCallDuration = parseFloat(stats.avg_call_duration) || 0;
       const callDropOffCount = parseInt(stats.call_drop_off_count) || 0;
       const callDropOffRate = Math.round((parseFloat(stats.call_drop_off_rate) || 0) * 10) / 10;
-      const missedCalls = parseInt(stats.missed_calls) || 0;
+      const notConnectedCalls = parseInt(stats.not_connected_calls) || 0;
       const demosScheduled = parseInt(stats.demos_scheduled) || 0;
       const hotLeadsGenerated = parseInt(stats.hot_leads_generated) || 0;
       const pendingFollowups = parseInt(stats.pending_followups) || 0;
@@ -117,7 +119,7 @@ export class CallAnalyticsController {
       const prevConnectionRate = parseFloat(prevStats.connection_rate) || 0;
       const prevAvgCallDuration = parseFloat(prevStats.avg_call_duration) || 0;
       const prevCallDropOffCount = parseInt(prevStats.call_drop_off_count) || 0;
-      const prevMissedCalls = parseInt(prevStats.missed_calls) || 0;
+      const prevNotConnectedCalls = parseInt(prevStats.not_connected_calls) || 0;
       const prevDemosScheduled = parseInt(prevStats.demos_scheduled) || 0;
       const prevHotLeadsGenerated = parseInt(prevStats.hot_leads_generated) || 0;
 
@@ -169,10 +171,10 @@ export class CallAnalyticsController {
       const additionalMetrics = [
         {
           title: "Not Connected",
-          value: missedCalls.toString(),
-          change: `${calculateChange(missedCalls, prevMissedCalls) >= 0 ? '+' : ''}${calculateChange(missedCalls, prevMissedCalls)}%`,
-          changeValue: `${missedCalls - prevMissedCalls >= 0 ? '+' : ''}${missedCalls - prevMissedCalls}`,
-          positive: calculateChange(missedCalls, prevMissedCalls) <= 0, // Lower is better
+          value: notConnectedCalls.toString(),
+          change: `${calculateChange(notConnectedCalls, prevNotConnectedCalls) >= 0 ? '+' : ''}${calculateChange(notConnectedCalls, prevNotConnectedCalls)}%`,
+          changeValue: `${notConnectedCalls - prevNotConnectedCalls >= 0 ? '+' : ''}${notConnectedCalls - prevNotConnectedCalls}`,
+          positive: calculateChange(notConnectedCalls, prevNotConnectedCalls) <= 0, // Lower is better
         },
         {
           title: "Demo Scheduled",
