@@ -1,6 +1,6 @@
 {
   "env": {
-    "TZ": "Asia/Kolkata"
+    "APP_TIMEZONE": "Asia/Kolkata"
   },
   "functions": {
     "src/server.ts": {

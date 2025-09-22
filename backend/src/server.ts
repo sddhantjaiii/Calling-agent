@@ -25,9 +25,11 @@ dotenv.config();
 
 // Set timezone for the Node.js process - critical for Vercel deployment
 // This ensures all Date operations use IST instead of UTC
-process.env.TZ = process.env.TZ || 'Asia/Kolkata';
-logger.info(`Application timezone set to: ${process.env.TZ}`);
-console.log(`🌍 Application timezone set to: ${process.env.TZ}`);
+// Use APP_TIMEZONE for Vercel (TZ is reserved), fallback to TZ for local development
+const timezone = process.env.APP_TIMEZONE || process.env.TZ || 'Asia/Kolkata';
+process.env.TZ = timezone;
+logger.info(`Application timezone set to: ${timezone}`);
+console.log(`🌍 Application timezone set to: ${timezone}`);
 
 const app = express();
 const PORT = process.env.PORT || 3000;

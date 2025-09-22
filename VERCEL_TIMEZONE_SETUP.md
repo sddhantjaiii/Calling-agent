@@ -10,9 +10,10 @@ Go to your Vercel project dashboard:
 1. Navigate to your project → **Settings** → **Environment Variables**
 2. Add the following environment variable:
    ```
-   Key: TZ
+   Key: APP_TIMEZONE
    Value: Asia/Kolkata
    ```
+   **Note**: `TZ` is a reserved environment variable in Vercel, so we use `APP_TIMEZONE` instead.
 3. Apply to **Production**, **Preview**, and **Development** environments
 4. **Redeploy** your application after adding the environment variable
 
@@ -22,16 +23,18 @@ Go to your Vercel project dashboard:
 ```typescript
 // Set timezone for the Node.js process - critical for Vercel deployment
 // This ensures all Date operations use IST instead of UTC
-process.env.TZ = process.env.TZ || 'Asia/Kolkata';
-logger.info(`Application timezone set to: ${process.env.TZ}`);
-console.log(`🌍 Application timezone set to: ${process.env.TZ}`);
+// Use APP_TIMEZONE for Vercel (TZ is reserved), fallback to TZ for local development
+const timezone = process.env.APP_TIMEZONE || process.env.TZ || 'Asia/Kolkata';
+process.env.TZ = timezone;
+logger.info(`Application timezone set to: ${timezone}`);
+console.log(`🌍 Application timezone set to: ${timezone}`);
 ```
 
 #### Vercel Configuration (`backend/vercel.json`)
 ```json
 {
   "env": {
-    "TZ": "Asia/Kolkata"
+    "APP_TIMEZONE": "Asia/Kolkata"
   },
   "functions": {
     "src/server.ts": {
@@ -56,9 +59,11 @@ Updated all analytics queries to use timezone-aware date calculations:
 
 ### 3. How This Fixes the Issue
 
-1. **Process-level timezone**: `process.env.TZ = 'Asia/Kolkata'` ensures all JavaScript Date operations use IST
-2. **Database queries**: `AT TIME ZONE 'Asia/Kolkata'` converts UTC timestamps to IST for date filtering
-3. **Vercel environment**: The TZ environment variable is automatically applied to all serverless functions
+1. **Process-level timezone**: `process.env.TZ = timezone` ensures all JavaScript Date operations use IST
+2. **Custom environment variable**: `APP_TIMEZONE` bypasses Vercel's TZ restriction
+3. **Fallback logic**: Works with both Vercel (`APP_TIMEZONE`) and local development (`TZ`)
+4. **Database queries**: `AT TIME ZONE 'Asia/Kolkata'` converts UTC timestamps to IST for date filtering
+5. **Vercel environment**: The APP_TIMEZONE environment variable is automatically applied to all serverless functions
 
 ### 4. Verification Steps
 
@@ -75,7 +80,7 @@ After redeployment:
 
 ### 6. Alternative Approach (If Environment Variable Doesn't Work)
 
-If the TZ environment variable doesn't work in Vercel, you can also set it programmatically:
+If the APP_TIMEZONE environment variable doesn't work in Vercel, you can also set it programmatically:
 ```typescript
 // In server.ts, before any other imports
 process.env.TZ = 'Asia/Kolkata';
@@ -85,21 +90,25 @@ This ensures the timezone is set before any Date operations occur.
 
 ## Important Notes
 
-1. **Redeploy Required**: You must redeploy your Vercel application after adding the TZ environment variable
-2. **Database Timezone**: The database session timezone is already set to Asia/Kolkata in your connection pool
-3. **Caching**: If you have any cached analytics data, it may take time to refresh with the new timezone-aware queries
+1. **Use APP_TIMEZONE, not TZ**: Vercel reserves the TZ environment variable, so use APP_TIMEZONE instead
+2. **Redeploy Required**: You must redeploy your Vercel application after adding the APP_TIMEZONE environment variable
+3. **Database Timezone**: The database session timezone is already set to Asia/Kolkata in your connection pool
+4. **Caching**: If you have any cached analytics data, it may take time to refresh with the new timezone-aware queries
 
 ## Testing
 
 You can test the timezone locally by setting the environment variable:
 ```bash
 # Windows PowerShell
-$env:TZ = "Asia/Kolkata"
+$env:APP_TIMEZONE = "Asia/Kolkata"
 npm run dev
 
 # Windows CMD
-set TZ=Asia/Kolkata && npm run dev
+set APP_TIMEZONE=Asia/Kolkata && npm run dev
 
 # Linux/Mac
+APP_TIMEZONE=Asia/Kolkata npm run dev
+
+# Or use the traditional TZ variable for local development
 TZ=Asia/Kolkata npm run dev
 ```
