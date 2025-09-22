@@ -19,6 +19,7 @@ import {
 import { performanceMonitoring, addPerformanceEndpoints } from './middleware/performanceMonitoring';
 import { scheduledTaskService } from './services/scheduledTaskService';
 import { webhookRetryService } from './services/webhookRetryService';
+import { NotConnectedCallsScheduler } from './schedulers/missedCallsScheduler';
 
 // Load environment variables
 dotenv.config();
@@ -282,6 +283,15 @@ async function startServer() {
       logger.info('Scheduled tasks started');
     } catch (error) {
       logger.error('Failed to start scheduled tasks', { error });
+    }
+
+    // Start not connected calls scheduler
+    try {
+      const notConnectedCallsScheduler = new NotConnectedCallsScheduler();
+      await notConnectedCallsScheduler.start();
+      logger.info('Not connected calls scheduler started');
+    } catch (error) {
+      logger.error('Failed to start not connected calls scheduler', { error });
     }
 
     // Start webhook retry processor

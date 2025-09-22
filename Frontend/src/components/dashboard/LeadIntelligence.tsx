@@ -702,8 +702,8 @@ const LeadIntelligence = ({ onOpenProfile }: LeadIntelligenceProps) => {
               <TableHead>Recent Lead Tag</TableHead>
               <TableHead>Engagement</TableHead>
               <TableHead>Intent</TableHead>
-              <TableHead>Budget</TableHead>
-              <TableHead>Timeline</TableHead>
+              <TableHead>Budget Constraint</TableHead>
+              <TableHead>Urgency</TableHead>
               <TableHead>Fit</TableHead>
               <TableHead>Escalated</TableHead>
               <TableHead>No. of Interactions</TableHead>

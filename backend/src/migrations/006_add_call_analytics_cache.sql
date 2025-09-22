@@ -116,7 +116,7 @@ BEGIN
     -- Insert or update the cache record
     INSERT INTO call_analytics_cache (
         user_id, date_period, period_type,
-        total_calls, successful_calls, failed_calls, missed_calls, connection_rate,
+        total_calls, successful_calls, failed_calls, not_connected, connection_rate,
         total_call_duration, average_call_duration,
         hot_leads, warm_leads, cold_leads, unqualified_leads, total_leads, 
         average_lead_score, conversion_rate,
@@ -127,7 +127,7 @@ BEGIN
     ) VALUES (
         target_user_id, target_date, 'daily',
         analytics_data.total_calls, analytics_data.successful_calls, 
-        analytics_data.failed_calls, analytics_data.missed_calls, analytics_data.connection_rate,
+        analytics_data.failed_calls, analytics_data.not_connected, analytics_data.connection_rate,
         analytics_data.total_call_duration, analytics_data.average_call_duration,
         analytics_data.hot_leads, analytics_data.warm_leads, 
         analytics_data.cold_leads, analytics_data.unqualified_leads, analytics_data.total_leads,
@@ -143,7 +143,7 @@ BEGIN
         total_calls = EXCLUDED.total_calls,
         successful_calls = EXCLUDED.successful_calls,
         failed_calls = EXCLUDED.failed_calls,
-        missed_calls = EXCLUDED.missed_calls,
+        not_connected = EXCLUDED.not_connected,
         connection_rate = EXCLUDED.connection_rate,
         total_call_duration = EXCLUDED.total_call_duration,
         average_call_duration = EXCLUDED.average_call_duration,

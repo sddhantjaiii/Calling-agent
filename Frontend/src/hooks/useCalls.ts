@@ -119,16 +119,45 @@ export const useCalls = (initialOptions?: CallListOptions): UseCallsReturn => {
 
       const response = await apiService.getCalls(initialOptions);
 
-      // Handle both paginated and non-paginated responses
+      // Normalize backend responses into a consistent shape
+      // Backend typically returns: { success: true, data: Call[], pagination: {...} }
+      // Some endpoints may return: { calls: Call[], pagination: {...} } or just Call[]
       let callsData: { calls: Call[]; pagination: CallListResponse['pagination'] | null };
-      if (response.data && typeof response.data === 'object' && 'calls' in response.data) {
-        callsData = response.data as CallListResponse;
-      } else {
-        callsData = {
-          calls: (response.data as unknown as Call[]) || [],
-          pagination: null
-        };
+      const raw: any = response as any;
+
+      let parsedCalls: Call[] = [];
+      let parsedPagination: CallListResponse['pagination'] | null = null;
+
+      if (raw && typeof raw === 'object') {
+        // Case 1: { data: Call[], pagination: {...} }
+        if (Array.isArray(raw.data)) {
+          parsedCalls = raw.data as Call[];
+          parsedPagination = (raw.pagination && typeof raw.pagination === 'object') ? raw.pagination : null;
+        }
+        // Case 2: { data: { calls: Call[], pagination? }, pagination? }
+        else if (raw.data && typeof raw.data === 'object') {
+          if (Array.isArray(raw.data.calls)) {
+            parsedCalls = raw.data.calls as Call[];
+            parsedPagination = (raw.data.pagination || raw.pagination) ?? null;
+          }
+        }
+        // Case 3: { calls: Call[], pagination: {...} }
+        if (parsedCalls.length === 0 && Array.isArray(raw.calls)) {
+          parsedCalls = raw.calls as Call[];
+          parsedPagination = (raw.pagination && typeof raw.pagination === 'object') ? raw.pagination : null;
+        }
       }
+
+      // Case 4: Response is an array directly
+      if (parsedCalls.length === 0 && Array.isArray(raw)) {
+        parsedCalls = raw as Call[];
+        parsedPagination = null;
+      }
+
+      callsData = {
+        calls: parsedCalls || [],
+        pagination: parsedPagination || null,
+      };
 
       // Convert snake_case keys to camelCase
       if (callsData.calls) {

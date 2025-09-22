@@ -22,11 +22,16 @@ export class CallController {
 
       // Parse query parameters for filtering
       const filters: any = {};
-      const options: any = {};
+      const options: any = {
+        limit: 30, // Default page size for infinite scroll
+        offset: 0,
+        sortBy: 'created_at',
+        sortOrder: 'DESC'
+      };
 
-      // Search term filter (searches across contact name, phone, summary)
+      // Search term filter (searches across contact name, phone, agent name)
       if (req.query.search && typeof req.query.search === 'string') {
-        filters.search = req.query.search;
+        filters.search = req.query.search.trim();
       }
 
       // Status filter
@@ -66,18 +71,18 @@ export class CallController {
         filters.endDate = new Date(req.query.end_date);
       }
 
-      // Duration filters
+      // Duration filters (in seconds)
       if (req.query.min_duration && typeof req.query.min_duration === 'string') {
         const minDuration = parseInt(req.query.min_duration);
         if (!isNaN(minDuration)) {
-          filters.minDuration = minDuration;
+          filters.minDurationSeconds = minDuration;
         }
       }
 
       if (req.query.max_duration && typeof req.query.max_duration === 'string') {
         const maxDuration = parseInt(req.query.max_duration);
         if (!isNaN(maxDuration)) {
-          filters.maxDuration = maxDuration;
+          filters.maxDurationSeconds = maxDuration;
         }
       }
 
@@ -133,162 +138,31 @@ export class CallController {
         }
       }
 
-      // Sorting options
-      if (req.query.sort_by && typeof req.query.sort_by === 'string') {
-        const validSortFields = ['created_at', 'duration_minutes', 'total_score', 'contact_name', 'phone_number'];
-        if (validSortFields.includes(req.query.sort_by)) {
-          options.sortBy = req.query.sort_by as any;
+      // Sorting options - Updated to include duration_seconds
+      if (req.query.sortBy && typeof req.query.sortBy === 'string') {
+        const validSortFields = ['created_at', 'duration_seconds', 'duration_minutes', 'total_score', 'contact_name', 'phone_number'];
+        if (validSortFields.includes(req.query.sortBy)) {
+          options.sortBy = req.query.sortBy as any;
         }
       }
 
-      if (req.query.sort_order && typeof req.query.sort_order === 'string') {
-        if (['ASC', 'DESC', 'asc', 'desc'].includes(req.query.sort_order)) {
-          options.sortOrder = req.query.sort_order.toUpperCase() as any;
+      if (req.query.sortOrder && typeof req.query.sortOrder === 'string') {
+        if (['ASC', 'DESC', 'asc', 'desc'].includes(req.query.sortOrder)) {
+          options.sortOrder = req.query.sortOrder.toUpperCase() as any;
         }
       }
 
-      // Get all calls for the user
-      let calls = await CallService.getUserCalls(userId);
-
-      // Apply filters
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
-        calls = calls.filter(call => 
-          (call.contact_name && call.contact_name.toLowerCase().includes(searchTerm)) ||
-          call.phone_number.includes(searchTerm) ||
-          // call_summary not available in call model
-          (call.agent_name && call.agent_name.toLowerCase().includes(searchTerm))
-        );
-      }
-
-      if (filters.status) {
-        calls = calls.filter(call => call.status === filters.status);
-      }
-
-      if (filters.agentId) {
-        calls = calls.filter(call => call.agent_id === filters.agentId);
-      }
-
-      if (filters.agentName) {
-        calls = calls.filter(call => call.agent_name === filters.agentName);
-      }
-
-      if (filters.phoneNumber) {
-        calls = calls.filter(call => call.phone_number.includes(filters.phoneNumber));
-      }
-
-      if (filters.contactName) {
-        const contactTerm = filters.contactName.toLowerCase();
-        calls = calls.filter(call => 
-          call.contact_name && call.contact_name.toLowerCase().includes(contactTerm)
-        );
-      }
-
-      if (filters.startDate) {
-        calls = calls.filter(call => new Date(call.created_at) >= filters.startDate);
-      }
-
-      if (filters.endDate) {
-        calls = calls.filter(call => new Date(call.created_at) <= filters.endDate);
-      }
-
-      if (filters.minDuration) {
-        calls = calls.filter(call => (call.duration_minutes || 0) >= filters.minDuration);
-      }
-
-      if (filters.maxDuration) {
-        calls = calls.filter(call => (call.duration_minutes || 0) <= filters.maxDuration);
-      }
-
-      if (filters.hasTranscript !== undefined) {
-        calls = calls.filter(call => !!call.transcript === filters.hasTranscript);
-      }
-
-      if (filters.hasAnalytics !== undefined) {
-        calls = calls.filter(call => !!call.lead_analytics === filters.hasAnalytics);
-      }
-
-      if (filters.minScore) {
-        calls = calls.filter(call => 
-          call.lead_analytics && (call.lead_analytics.total_score || 0) >= filters.minScore
-        );
-      }
-
-      if (filters.maxScore) {
-        calls = calls.filter(call => 
-          call.lead_analytics && (call.lead_analytics.total_score || 0) <= filters.maxScore
-        );
-      }
-
-      if (filters.leadStatus) {
-        calls = calls.filter(call => 
-          call.lead_analytics && call.lead_analytics.lead_status_tag === filters.leadStatus
-        );
-      }
-
-      if (filters.leadTag) {
-        calls = calls.filter(call => {
-          if (!call.lead_analytics?.total_score) return filters.leadTag === 'Cold';
-          const score = call.lead_analytics.total_score;
-          const tag = score >= 80 ? 'Hot' : score >= 60 ? 'Warm' : 'Cold';
-          return tag === filters.leadTag;
-        });
-      }
-
-      // Apply sorting
-      if (options.sortBy) {
-        calls.sort((a, b) => {
-          let aValue: any = a[options.sortBy as keyof typeof a];
-          let bValue: any = b[options.sortBy as keyof typeof b];
-
-          // Handle special cases
-          if (options.sortBy === 'total_score') {
-            aValue = a.lead_analytics?.total_score || 0;
-            bValue = b.lead_analytics?.total_score || 0;
-          }
-
-          // Handle date sorting
-          if (options.sortBy === 'created_at') {
-            aValue = new Date(aValue).getTime();
-            bValue = new Date(bValue).getTime();
-          }
-
-          // Handle string sorting
-          if (typeof aValue === 'string' && typeof bValue === 'string') {
-            aValue = aValue.toLowerCase();
-            bValue = bValue.toLowerCase();
-          }
-
-          // Handle null/undefined values
-          if (aValue == null && bValue == null) return 0;
-          if (aValue == null) return options.sortOrder === 'DESC' ? 1 : -1;
-          if (bValue == null) return options.sortOrder === 'DESC' ? -1 : 1;
-
-          if (options.sortOrder === 'DESC') {
-            return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-          } else {
-            return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-          }
-        });
-      } else {
-        // Default sort by created_at (newest first)
-        calls.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      }
-
-      // Apply pagination
-      const total = calls.length;
-      const limit = options.limit || 50;
-      const offset = options.offset || 0;
-      const paginatedCalls = calls.slice(offset, offset + limit);
+      // Use CallService with database-level filtering
+      const result = await CallService.getFilteredCalls(userId, filters, options);
 
       return res.json({
         success: true,
-        data: paginatedCalls,
+        data: result.calls,
         pagination: {
-          total,
-          limit,
-          offset,
-          hasMore: offset + limit < total
+          total: result.total,
+          limit: options.limit,
+          offset: options.offset,
+          hasMore: result.hasMore
         }
       });
     } catch (error) {

@@ -20,7 +20,8 @@
     "refresh-kpi": "ts-node src/scripts/refresh-kpi-materialized-view.ts",
     "verify-materialized-view": "ts-node src/scripts/verify-materialized-view.ts",
     "test-dashboard-performance": "ts-node src/scripts/test-dashboard-performance.ts",
-    "test-connection-pool": "ts-node src/scripts/test-connection-pool.ts"
+    "test-connection-pool": "ts-node src/scripts/test-connection-pool.ts",
+    "test-twilio": "ts-node src/scripts/test-twilio-integration.ts"
   },
   "keywords": [
     "ai",
@@ -39,6 +40,7 @@
     "@types/form-data": "^2.2.1",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/multer": "^1.4.11",
+    "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.17",
     "@types/pg": "^8.15.5",
     "@types/xlsx": "^0.0.35",
@@ -54,10 +56,12 @@
     "isomorphic-dompurify": "^2.26.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "node-cron": "^4.2.1",
     "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.5",
     "pg": "^8.16.3",
     "stripe": "^14.9.0",
+    "twilio": "^5.10.0",
     "xlsx": "^0.18.5",
     "zod": "^4.1.8"
   },

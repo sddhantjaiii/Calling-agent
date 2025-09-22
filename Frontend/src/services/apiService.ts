@@ -1113,6 +1113,12 @@ class ApiService {
       if (options.offset) queryParams.append('offset', options.offset.toString());
       if (options.sortBy) queryParams.append('sortBy', options.sortBy);
       if (options.sortOrder) queryParams.append('sortOrder', options.sortOrder);
+      if (options.search) queryParams.append('search', options.search);
+      if (options.agentNames && options.agentNames.length > 0) {
+        options.agentNames.forEach(agentName => {
+          queryParams.append('agent', agentName);
+        });
+      }
 
       if (queryParams.toString()) {
         url += `?${queryParams.toString()}`;

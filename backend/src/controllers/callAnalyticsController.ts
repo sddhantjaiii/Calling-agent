@@ -23,24 +23,28 @@ export class CallAnalyticsController {
       // Build query with optional agent filtering
       let kpiQuery = `
         SELECT 
-          COUNT(c.id) as total_calls,
-          COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as successful_conversations,
+          COUNT(DISTINCT c.id) as total_calls,
+          COUNT(DISTINCT c.id) as total_calls_for_avg,
+          COUNT(DISTINCT c.phone_number) as unique_phone_numbers,
           CASE 
-            WHEN COUNT(c.id) > 0 
-            THEN (COUNT(CASE WHEN c.status = 'completed' THEN 1 END) * 100.0 / COUNT(c.id))
+            WHEN COUNT(DISTINCT c.id) > 0 
+            THEN (COUNT(DISTINCT c.id) FILTER (WHERE c.status = 'completed') * 100.0 / COUNT(DISTINCT c.id))
             ELSE 0 
           END as connection_rate,
-          COALESCE(AVG(CASE WHEN c.status = 'completed' THEN c.duration_seconds END), 0) / 60.0 as avg_call_duration,
-          COUNT(CASE WHEN la.total_score >= 60 THEN 1 END) as leads_converted,
+          COALESCE(AVG(DISTINCT CASE WHEN c.status = 'completed' THEN c.duration_seconds END), 0) / 60.0 as avg_call_duration,
+          -- Call Drop Off: calls with duration < 20 seconds
+          COUNT(DISTINCT c.id) FILTER (WHERE c.duration_seconds < 20) as call_drop_off_count,
           CASE 
-            WHEN COUNT(c.id) > 0 
-            THEN (COUNT(CASE WHEN la.total_score >= 60 THEN 1 END) * 100.0 / COUNT(c.id))
+            WHEN COUNT(DISTINCT c.id) > 0 
+            THEN (COUNT(DISTINCT c.id) FILTER (WHERE c.duration_seconds < 20) * 100.0 / COUNT(DISTINCT c.id))
             ELSE 0 
-          END as conversion_rate,
-          COUNT(CASE WHEN c.status = 'failed' OR c.status = 'cancelled' THEN 1 END) as missed_calls,
-          COUNT(CASE WHEN la.cta_interactions->>'demo_clicked' = 'true' THEN 1 END) as demos_scheduled,
-          COUNT(CASE WHEN la.total_score >= 80 THEN 1 END) as hot_leads_generated,
-          COUNT(CASE WHEN la.lead_status_tag = 'follow_up_later' THEN 1 END) as pending_followups
+          END as call_drop_off_rate,
+          COUNT(DISTINCT c.id) FILTER (WHERE c.status = 'failed' OR c.status = 'cancelled') as missed_calls,
+          COUNT(DISTINCT c.id) FILTER (WHERE la.cta_interactions->>'demo_clicked' = 'true') as demos_scheduled,
+          -- Hot leads: based on lead_status_tag indicating Hot
+          COUNT(DISTINCT c.id) FILTER (WHERE COALESCE(la.lead_status_tag,'') ILIKE 'hot%') as hot_leads_generated,
+          -- Pending follow-ups: flexible match for tag variants like 'Follow-Up Later'
+          COUNT(DISTINCT c.id) FILTER (WHERE COALESCE(la.lead_status_tag,'') ILIKE 'follow%later%') as pending_followups
         FROM calls c
         LEFT JOIN lead_analytics la ON c.id = la.call_id AND la.user_id = c.user_id
         WHERE c.user_id = $1 
@@ -96,21 +100,23 @@ export class CallAnalyticsController {
       };
 
       const totalCalls = parseInt(stats.total_calls) || 0;
-      const successfulConversations = parseInt(stats.successful_conversations) || 0;
+      const totalCallsForAvg = parseInt(stats.total_calls_for_avg) || 0;
+      const uniquePhoneNumbers = parseInt(stats.unique_phone_numbers) || 0;
       const connectionRate = Math.round((parseFloat(stats.connection_rate) || 0) * 10) / 10;
       const avgCallDuration = parseFloat(stats.avg_call_duration) || 0;
-      const leadsConverted = parseInt(stats.leads_converted) || 0;
-      const conversionRate = Math.round((parseFloat(stats.conversion_rate) || 0) * 10) / 10;
+      const callDropOffCount = parseInt(stats.call_drop_off_count) || 0;
+      const callDropOffRate = Math.round((parseFloat(stats.call_drop_off_rate) || 0) * 10) / 10;
       const missedCalls = parseInt(stats.missed_calls) || 0;
       const demosScheduled = parseInt(stats.demos_scheduled) || 0;
       const hotLeadsGenerated = parseInt(stats.hot_leads_generated) || 0;
       const pendingFollowups = parseInt(stats.pending_followups) || 0;
 
       const prevTotalCalls = parseInt(prevStats.total_calls) || 0;
-      const prevSuccessfulConversations = parseInt(prevStats.successful_conversations) || 0;
+      const prevTotalCallsForAvg = parseInt(prevStats.total_calls_for_avg) || 0;
+      const prevUniquePhoneNumbers = parseInt(prevStats.unique_phone_numbers) || 0;
       const prevConnectionRate = parseFloat(prevStats.connection_rate) || 0;
       const prevAvgCallDuration = parseFloat(prevStats.avg_call_duration) || 0;
-      const prevLeadsConverted = parseInt(prevStats.leads_converted) || 0;
+      const prevCallDropOffCount = parseInt(prevStats.call_drop_off_count) || 0;
       const prevMissedCalls = parseInt(prevStats.missed_calls) || 0;
       const prevDemosScheduled = parseInt(prevStats.demos_scheduled) || 0;
       const prevHotLeadsGenerated = parseInt(prevStats.hot_leads_generated) || 0;
@@ -124,11 +130,11 @@ export class CallAnalyticsController {
           positive: calculateChange(totalCalls, prevTotalCalls) >= 0,
         },
         {
-          title: "Successful Conversations",
-          value: successfulConversations.toLocaleString(),
-          change: `${calculateChange(successfulConversations, prevSuccessfulConversations) >= 0 ? '+' : ''}${calculateChange(successfulConversations, prevSuccessfulConversations)}%`,
-          changeValue: `${successfulConversations - prevSuccessfulConversations >= 0 ? '+' : ''}${successfulConversations - prevSuccessfulConversations}`,
-          positive: calculateChange(successfulConversations, prevSuccessfulConversations) >= 0,
+          title: "Avg Interaction (Calls) per Lead",
+          value: uniquePhoneNumbers > 0 ? (totalCallsForAvg / uniquePhoneNumbers).toFixed(1) : "0",
+          change: `${prevUniquePhoneNumbers > 0 ? calculateChange(totalCallsForAvg / uniquePhoneNumbers, prevTotalCallsForAvg / prevUniquePhoneNumbers) >= 0 ? '+' : '' : ''}${prevUniquePhoneNumbers > 0 ? calculateChange(totalCallsForAvg / uniquePhoneNumbers, prevTotalCallsForAvg / prevUniquePhoneNumbers) : 0}%`,
+          changeValue: `${uniquePhoneNumbers > 0 && prevUniquePhoneNumbers > 0 ? ((totalCallsForAvg / uniquePhoneNumbers) - (prevTotalCallsForAvg / prevUniquePhoneNumbers)).toFixed(1) : '0'}`,
+          positive: prevUniquePhoneNumbers > 0 ? calculateChange(totalCallsForAvg / uniquePhoneNumbers, prevTotalCallsForAvg / prevUniquePhoneNumbers) >= 0 : true,
         },
         {
           title: "Call Connection Rate",
@@ -145,11 +151,11 @@ export class CallAnalyticsController {
           positive: calculateChange(avgCallDuration, prevAvgCallDuration) >= 0,
         },
         {
-          title: "Call-to-Lead Conversion",
-          value: `${conversionRate}%`,
-          change: `${calculateChange(leadsConverted, prevLeadsConverted) >= 0 ? '+' : ''}${calculateChange(leadsConverted, prevLeadsConverted)}%`,
-          changeValue: `${leadsConverted - prevLeadsConverted >= 0 ? '+' : ''}${leadsConverted - prevLeadsConverted}`,
-          positive: calculateChange(leadsConverted, prevLeadsConverted) >= 0,
+          title: "Call Drop Off",
+          value: `${callDropOffRate}%`,
+          change: `${calculateChange(callDropOffCount, prevCallDropOffCount) >= 0 ? '+' : ''}${calculateChange(callDropOffCount, prevCallDropOffCount)}%`,
+          changeValue: `${callDropOffCount - prevCallDropOffCount >= 0 ? '+' : ''}${callDropOffCount - prevCallDropOffCount}`,
+          positive: calculateChange(callDropOffCount, prevCallDropOffCount) <= 0,
         },
         {
           title: "Pending Follow-ups",
@@ -162,7 +168,7 @@ export class CallAnalyticsController {
 
       const additionalMetrics = [
         {
-          title: "Missed Calls",
+          title: "Not Connected",
           value: missedCalls.toString(),
           change: `${calculateChange(missedCalls, prevMissedCalls) >= 0 ? '+' : ''}${calculateChange(missedCalls, prevMissedCalls)}%`,
           changeValue: `${missedCalls - prevMissedCalls >= 0 ? '+' : ''}${missedCalls - prevMissedCalls}`,
@@ -222,19 +228,17 @@ export class CallAnalyticsController {
         FROM (
           SELECT 
             CASE 
-              WHEN la.total_score >= 80 THEN 'Hot Lead'
-              WHEN la.total_score >= 60 THEN 'Warm - Nurture'
-              WHEN la.total_score >= 40 THEN 'Cold / Low Budget'
-              WHEN la.total_score >= 20 THEN 'Follow-Up Later'
-              ELSE 'Needs Human Help'
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'hot%' THEN 'Hot'
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'warm%' THEN 'Warm'
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'cold%' THEN 'Cold'
+              ELSE 'Other'
             END as quality_category,
-            COUNT(*) as count,
+            COUNT(DISTINCT c.id) as count,
             CASE 
-              WHEN la.total_score >= 80 THEN 1
-              WHEN la.total_score >= 60 THEN 2
-              WHEN la.total_score >= 40 THEN 3
-              WHEN la.total_score >= 20 THEN 4
-              ELSE 5
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'hot%' THEN 1
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'warm%' THEN 2
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'cold%' THEN 3
+              ELSE 4
             END as sort_order
           FROM calls c
           JOIN lead_analytics la ON c.id = la.call_id AND la.user_id = c.user_id
@@ -256,18 +260,16 @@ export class CallAnalyticsController {
       query += `
           GROUP BY 
             CASE 
-              WHEN la.total_score >= 80 THEN 'Hot Lead'
-              WHEN la.total_score >= 60 THEN 'Warm - Nurture'
-              WHEN la.total_score >= 40 THEN 'Cold / Low Budget'
-              WHEN la.total_score >= 20 THEN 'Follow-Up Later'
-              ELSE 'Needs Human Help'
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'hot%' THEN 'Hot'
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'warm%' THEN 'Warm'
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'cold%' THEN 'Cold'
+              ELSE 'Other'
             END,
             CASE 
-              WHEN la.total_score >= 80 THEN 1
-              WHEN la.total_score >= 60 THEN 2
-              WHEN la.total_score >= 40 THEN 3
-              WHEN la.total_score >= 20 THEN 4
-              ELSE 5
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'hot%' THEN 1
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'warm%' THEN 2
+              WHEN COALESCE(la.lead_status_tag,'') ILIKE 'cold%' THEN 3
+              ELSE 4
             END
         ) subquery
         ORDER BY sort_order
@@ -311,15 +313,18 @@ export class CallAnalyticsController {
       const fromDate = dateFrom ? new Date(dateFrom as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const toDate = dateTo ? new Date(dateTo as string) : new Date();
 
+      // Get total contacts from contacts table
+      let contactsQuery = `SELECT COUNT(DISTINCT id) as total_contacts FROM contacts WHERE user_id = $1`;
+      const contactsParams = [userId];
+      
       let query = `
         SELECT 
-          COUNT(c.id) as total_calls,
-          COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as connected,
-          COUNT(CASE WHEN c.status = 'completed' AND c.duration_minutes > 1 THEN 1 END) as conversation,
-          COUNT(CASE WHEN la.total_score >= 40 THEN 1 END) as interest_shown,
-          COUNT(CASE WHEN la.total_score >= 60 THEN 1 END) as lead_generated
+          COUNT(DISTINCT c.phone_number) as total_unique_calls,
+          COUNT(DISTINCT c.phone_number) FILTER (WHERE la.cta_demo_clicked = true) as unique_demo_booked,
+          COUNT(DISTINCT cont.id) FILTER (WHERE cont.is_customer = true) as customers
         FROM calls c
         LEFT JOIN lead_analytics la ON c.id = la.call_id AND la.user_id = c.user_id
+        LEFT JOIN contacts cont ON cont.phone_number = c.phone_number AND cont.user_id = c.user_id
         WHERE c.user_id = $1 
           AND c.created_at >= $2 
           AND c.created_at <= $3`;
@@ -331,36 +336,37 @@ export class CallAnalyticsController {
         queryParams.push(agent.id);
       }
 
-      const result = await database.query(query, queryParams);
-      const stats = result.rows[0];
+      // Execute both queries
+      const [contactsResult, callsResult] = await Promise.all([
+        database.query(contactsQuery, contactsParams),
+        database.query(query, queryParams)
+      ]);
+      
+      const contactsStats = contactsResult.rows[0];
+      const callsStats = callsResult.rows[0];
 
-      const colors = ["#1A6262", "#91C499", "#E1A940", "#FF6700", "#a855f7"];
+      const colors = ["#1A6262", "#91C499", "#E1A940", "#FF6700"];
 
       const funnelData = [
         {
-          name: "Total Calls",
-          value: parseInt(stats.total_calls) || 0,
+          name: "Total Contacts",
+          value: parseInt(contactsStats.total_contacts) || 0,
           fill: colors[0],
         },
         {
-          name: "Connected",
-          value: parseInt(stats.connected) || 0,
+          name: "Total Unique Calls",
+          value: parseInt(callsStats.total_unique_calls) || 0,
           fill: colors[1],
         },
         {
-          name: "Conversation",
-          value: parseInt(stats.conversation) || 0,
+          name: "Unique Demo Booked",
+          value: parseInt(callsStats.unique_demo_booked) || 0,
           fill: colors[2],
         },
         {
-          name: "Interest Shown",
-          value: parseInt(stats.interest_shown) || 0,
+          name: "Customers",
+          value: parseInt(callsStats.customers) || 0,
           fill: colors[3],
-        },
-        {
-          name: "Lead Generated",
-          value: parseInt(stats.lead_generated) || 0,
-          fill: colors[4],
         },
       ];
 
@@ -391,15 +397,16 @@ export class CallAnalyticsController {
       const fromDate = dateFrom ? new Date(dateFrom as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const toDate = dateTo ? new Date(dateTo as string) : new Date();
 
+      // Using 0-15 scale; consider >=12 as "High"
       let query = `
         SELECT 
           la.intent_score,
           la.budget_score,
           COUNT(*) as leads,
           CASE 
-            WHEN la.intent_score >= 80 AND la.budget_score >= 80 THEN 'High Intent, High Budget'
-            WHEN la.intent_score >= 80 AND la.budget_score < 80 THEN 'High Intent, Low Budget'
-            WHEN la.intent_score < 80 AND la.budget_score >= 80 THEN 'Low Intent, High Budget'
+            WHEN la.intent_score >= 12 AND la.budget_score >= 12 THEN 'High Intent, High Budget'
+            WHEN la.intent_score >= 12 AND la.budget_score < 12 THEN 'High Intent, Low Budget'
+            WHEN la.intent_score < 12 AND la.budget_score >= 12 THEN 'Low Intent, High Budget'
             ELSE 'Low Intent, Low Budget'
           END as segment_name
         FROM calls c
@@ -408,17 +415,16 @@ export class CallAnalyticsController {
           AND c.created_at >= $2 
           AND c.created_at <= $3`;
 
-      const queryParams = [userId, fromDate, toDate];
-      
+      const queryParams: any[] = [userId, fromDate, toDate];
       if (agent) {
         query += ` AND c.agent_id = $4`;
         queryParams.push(agent.id);
       }
 
       query += `
-        GROUP BY la.intent_score, la.budget_score
+        GROUP BY la.intent_score, la.budget_score, segment_name
         ORDER BY leads DESC
-        LIMIT 20
+        LIMIT 200
       `;
 
       const result = await database.query(query, queryParams);
@@ -426,8 +432,8 @@ export class CallAnalyticsController {
       const colors = ["#1A6262", "#91C499", "#E1A940", "#FF6700", "#a855f7"];
 
       const intentBudgetData = result.rows.map((row: any, index: number) => ({
-        intent: Math.round(row.intent_score / 10), // Scale to 1-10
-        budget: Math.round(row.budget_score / 10), // Scale to 1-10
+        intent: parseInt(row.intent_score), // 0-15 scale
+        budget: parseInt(row.budget_score), // 0-15 scale
         leads: parseInt(row.leads),
         name: row.segment_name,
         color: colors[index % colors.length],
@@ -463,18 +469,19 @@ export class CallAnalyticsController {
       let query = `
         SELECT 
           call_source,
-          COUNT(*) as call_count,
-          COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_calls,
-          ROUND(AVG(duration_seconds) / 60.0, 2) as avg_duration,
-          COUNT(CASE WHEN la.total_score >= 60 THEN 1 END) as leads_generated,
+          COUNT(DISTINCT c.id) as call_count,
+          COUNT(DISTINCT c.id) FILTER (WHERE status = 'completed') as successful_calls,
+          ROUND(AVG(CASE WHEN status = 'completed' THEN duration_seconds END) / 60.0, 2) as avg_duration,
+          -- Leads generated: Warm or Hot tags
+          COUNT(DISTINCT c.id) FILTER (WHERE COALESCE(la.lead_status_tag,'') ILIKE 'warm%' OR COALESCE(la.lead_status_tag,'') ILIKE 'hot%') as leads_generated,
           CASE 
-            WHEN COUNT(*) > 0 
-            THEN ROUND((COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*)), 1)
+            WHEN COUNT(DISTINCT c.id) > 0 
+            THEN ROUND((COUNT(DISTINCT c.id) FILTER (WHERE status = 'completed') * 100.0 / COUNT(DISTINCT c.id)), 1)
             ELSE 0 
           END as success_rate,
           CASE 
-            WHEN COUNT(*) > 0 
-            THEN ROUND((COUNT(CASE WHEN la.total_score >= 60 THEN 1 END) * 100.0 / COUNT(*)), 1)
+            WHEN COUNT(DISTINCT c.id) > 0 
+            THEN ROUND((COUNT(DISTINCT c.id) FILTER (WHERE COALESCE(la.lead_status_tag,'') ILIKE 'warm%' OR COALESCE(la.lead_status_tag,'') ILIKE 'hot%') * 100.0 / COUNT(DISTINCT c.id)), 1)
             ELSE 0 
           END as conversion_rate
         FROM calls c

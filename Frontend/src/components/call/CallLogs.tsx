@@ -77,44 +77,58 @@ const CallLogs: React.FC<CallLogsProps> = ({
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<'createdAt' | 'durationMinutes' | 'contactName'>('createdAt');
+  const [sortBy, setSortBy] = useState<'createdAt' | 'durationSeconds' | 'contactName'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
   const [selectedCallSource, setSelectedCallSource] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [allLoadedCalls, setAllLoadedCalls] = useState<Call[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasReachedEnd, setHasReachedEnd] = useState(false);
   const audioProgressRef = useRef<{ [key: string]: { current: number; total: number } }>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const ITEMS_PER_PAGE = initialPageSize;
+  const ITEMS_PER_PAGE = initialPageSize || 30; // Default to 30 for infinite scroll
+  const SCROLL_THRESHOLD = 10; // Trigger load when 10 items from bottom
 
-  // Debounce search term
+  // Debounce search term and reset pagination
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1); // Reset to first page when searching
+      // Reset infinite scroll state when search changes
+      setCurrentPage(1);
+      setHasReachedEnd(false);
+      // Only clear allLoadedCalls if search term actually changed
+      if (searchTerm !== debouncedSearchTerm) {
+        setAllLoadedCalls([]);
+      }
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Reset page when call source filter changes
+  // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCallSource]);
+    setHasReachedEnd(false);
+    // Don't immediately clear allLoadedCalls - let the data effect handle it
+  }, [selectedCallSource, sortBy, sortOrder, selectedAgents]);
 
-  // Map camelCase to snake_case for backend
+  // Map camelCase to snake_case for backend - Updated for duration_seconds
   const sortByMapping: Record<string, string> = {
     'createdAt': 'created_at',
-    'durationMinutes': 'duration_minutes',
+    'durationSeconds': 'duration_seconds',
     'contactName': 'contact_name'
   };
 
-  // Prepare options for the hook
+  // Prepare options for the hook with server-side filtering
   const callsOptions: CallListOptions = {
     limit: ITEMS_PER_PAGE,
     offset: (currentPage - 1) * ITEMS_PER_PAGE,
-    sortBy: sortByMapping[sortBy] as 'created_at' | 'duration_minutes' | 'total_score' | 'contact_name' | 'phone_number',
+    sortBy: sortByMapping[sortBy] as 'created_at' | 'duration_seconds' | 'total_score' | 'contact_name' | 'phone_number',
     sortOrder,
+    // Add server-side search and filtering
+    search: debouncedSearchTerm || undefined,
+    agentNames: selectedAgents && selectedAgents.length > 0 ? selectedAgents : undefined,
   };
 
   const {
@@ -127,7 +141,7 @@ const CallLogs: React.FC<CallLogsProps> = ({
     loadTranscript,
   } = useCalls(callsOptions);
 
-  // Handle lazy loading vs traditional pagination
+  // For infinite scroll, always use accumulated calls
   const displayCalls = useLazyLoading ? allLoadedCalls : calls;
 
   // Calculate pagination info
@@ -135,43 +149,91 @@ const CallLogs: React.FC<CallLogsProps> = ({
   const totalPages = Math.ceil(totalCalls / ITEMS_PER_PAGE);
   const hasMore = pagination?.hasMore || false;
 
-  // Filter calls based on search term, call source, and selected agents (client-side filtering for loaded data)
+  // Apply only call source filtering client-side (other filters are server-side)
   const filteredCalls = displayCalls.filter((call) => {
-    const matchesSearch =
-      (call.contactName || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      call.phoneNumber.includes(debouncedSearchTerm) ||
-      call.status.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-
     const matchesSource = !selectedCallSource ||
       getCallSourceFromData(call) === selectedCallSource;
-
-    // Filter by agent name since elevenlabsAgentId is not populated
-    const matchesAgent = !selectedAgents || selectedAgents.length === 0 ||
-      selectedAgents.includes(call.agentName || '');
-
-    return matchesSearch && matchesSource && matchesAgent;
+    return matchesSource;
   });
   
 
-  // Update accumulated calls for lazy loading
+  // Update accumulated calls for infinite scroll
   useEffect(() => {
     if (useLazyLoading) {
       if (currentPage === 1) {
-        // Reset for new search or first load
+        // Reset for new search or first load - always set the calls, even if empty
         setAllLoadedCalls(calls);
-      } else {
-        // Append new calls
+        setHasReachedEnd(!hasMore && calls.length === 0);
+      } else if (calls.length > 0) {
+        // Append new calls only if we have data
         setAllLoadedCalls(prev => {
           const existingIds = new Set(prev.map(c => c.id));
           const newCalls = calls.filter(c => !existingIds.has(c.id));
-          return [...prev, ...newCalls];
+          const updated = [...prev, ...newCalls];
+          
+          // Check if we've reached the end
+          if (!hasMore) {
+            setHasReachedEnd(true);
+          }
+          
+          return updated;
         });
       }
+    }
+  }, [calls, currentPage, useLazyLoading, hasMore]);
+
+  // Reset isLoadingMore when loading state changes
+  useEffect(() => {
+    if (!loading && isLoadingMore) {
       setIsLoadingMore(false);
     }
-  }, [calls, currentPage, useLazyLoading]);
+  }, [loading, isLoadingMore]);
 
-  
+  // Infinite scroll detection with basic debounce
+  useEffect(() => {
+    if (!useLazyLoading || !scrollContainerRef.current) return;
+
+    let ticking = false;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        ticking = false;
+        const container = scrollContainerRef.current;
+        if (!container || hasReachedEnd || loading || isLoadingMore) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+        
+        // Trigger when we're 90% down the list (approximately 10 items from bottom)
+        if (scrollPercentage > 0.9 && hasMore) {
+          handleLoadMore();
+        }
+      });
+    };
+
+    const container = scrollContainerRef.current;
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll as any);
+    };
+  }, [useLazyLoading, hasReachedEnd, loading, isLoadingMore, hasMore]);
+
+  // Auto-load next page if content doesn't fill the viewport
+  useEffect(() => {
+    if (!useLazyLoading) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // If we have items but the scroll doesn't need to scroll and there's more, load more
+    const needsMore = container.scrollHeight <= container.clientHeight + 16; // small buffer
+    if (filteredCalls.length > 0 && hasMore && !loading && !isLoadingMore && !hasReachedEnd && needsMore) {
+      handleLoadMore();
+    }
+  }, [filteredCalls.length, hasMore, loading, isLoadingMore, hasReachedEnd, useLazyLoading]);
+
+
   const handleShowTranscript = async (call: Call) => {
     try {
       const transcript = await loadTranscript(call.id);
@@ -191,7 +253,7 @@ const CallLogs: React.FC<CallLogsProps> = ({
   };
 
   const handleLoadMore = () => {
-    if (useLazyLoading && hasMore && !loading && !isLoadingMore) {
+    if (useLazyLoading && hasMore && !loading && !isLoadingMore && !hasReachedEnd) {
       setIsLoadingMore(true);
       setCurrentPage(prev => prev + 1);
     }
@@ -204,7 +266,9 @@ const CallLogs: React.FC<CallLogsProps> = ({
       setSortBy(newSortBy);
       setSortOrder('DESC');
     }
+    // Reset infinite scroll state - but let the data effect handle clearing
     setCurrentPage(1);
+    setHasReachedEnd(false);
   };
 
   const handleCloseTranscript = () => {
@@ -430,7 +494,11 @@ const CallLogs: React.FC<CallLogsProps> = ({
             Unified Call Logs
           </h2>
           <div className="text-sm text-gray-500">
-            {loading ? 'Loading...' : `Displaying ${filteredCalls.length} of ${totalCalls} calls`}
+            {loading ? 'Loading...' : (
+              useLazyLoading 
+                ? `Showing ${filteredCalls.length} calls${totalCalls > 0 ? ` of ${totalCalls} total` : ''}${hasMore ? ' (scroll for more)' : ''}`
+                : `Displaying ${filteredCalls.length} of ${totalCalls} calls`
+            )}
           </div>
         </div>
 
@@ -470,7 +538,7 @@ const CallLogs: React.FC<CallLogsProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="createdAt">Sort by Date</SelectItem>
-                  <SelectItem value="durationMinutes">Sort by Duration</SelectItem>
+                  <SelectItem value="durationSeconds">Sort by Duration</SelectItem>
                   <SelectItem value="contactName">Sort by Contact</SelectItem>
                 </SelectContent>
               </Select>
@@ -488,7 +556,10 @@ const CallLogs: React.FC<CallLogsProps> = ({
         </div>
 
         {/* Call Log Cards */}
-        <div className="space-y-4">
+        <div 
+          ref={scrollContainerRef}
+          className="space-y-4 max-h-[70vh] overflow-y-auto"
+        >
           {loading && filteredCalls.length === 0 ? (
             // Loading skeleton
             Array.from({ length: 5 }).map((_, i) => (
@@ -716,15 +787,32 @@ const CallLogs: React.FC<CallLogsProps> = ({
           )}
         </div>
 
-        {/* Pagination or Lazy Loading */}
+        {/* Pagination or Infinite Scroll Loading */}
         {filteredCalls.length > 0 && (
           useLazyLoading ? (
-            <LazyLoader
-              hasMore={hasMore}
-              loading={isLoadingMore}
-              onLoadMore={handleLoadMore}
-              threshold={200}
-            />
+            <div className="flex flex-col items-center space-y-4 py-4">
+              {(isLoadingMore || loading) && (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm text-gray-500">
+                    {currentPage === 1 ? 'Loading calls...' : 'Loading more calls...'}
+                  </span>
+                </div>
+              )}
+              {hasReachedEnd && filteredCalls.length > 0 && (
+                <div className="text-sm text-gray-500 text-center">
+                  You've reached the end of the call logs ({filteredCalls.length} total calls)
+                </div>
+              )}
+              {hasMore && !hasReachedEnd && !loading && !isLoadingMore && filteredCalls.length > 0 && (
+                <LazyLoader
+                  hasMore={hasMore}
+                  loading={isLoadingMore}
+                  onLoadMore={handleLoadMore}
+                  threshold={200}
+                />
+              )}
+            </div>
           ) : (
             totalPages > 1 && (
               <Pagination

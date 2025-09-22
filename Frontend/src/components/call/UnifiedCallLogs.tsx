@@ -198,7 +198,7 @@ const UnifiedCallLogs = ({ activeTab, activeSubTab, onOpenProfile }: UnifiedCall
           })()}
           onOpenProfile={onOpenProfile}
           useLazyLoading={true}
-          initialPageSize={20}
+          initialPageSize={30}
         />
       </div>
     </div>

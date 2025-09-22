@@ -22,6 +22,7 @@ import agentAnalyticsRoutes from './agentAnalytics';
 import monitoringRoutes from './monitoring';
 import dataIntegrityRoutes from './dataIntegrity';
 import notificationRoutes from './notifications';
+import twilioRoutes from './twilio';
 
 // Import rate limiting middleware
 import { generalRateLimit, authRateLimit } from '../middleware/rateLimit';
@@ -65,6 +66,7 @@ router.use('/follow-ups', authenticatedRateLimit, followUpsRoutes);
 router.use('/customers', authenticatedRateLimit, customersRoutes);
 router.use('/agent-analytics', authenticatedRateLimit, agentAnalyticsRoutes);
 router.use('/notifications', authenticatedRateLimit, notificationRoutes);
+router.use('/twilio', authenticatedRateLimit, twilioRoutes);
 
 // Monitoring routes - no rate limiting
 router.use('/monitoring', monitoringRoutes);

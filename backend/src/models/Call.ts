@@ -313,6 +313,7 @@ export class CallModel extends BaseModel<CallInterface> {
     totalCalls: number;
     completedCalls: number;
     failedCalls: number;
+    notConnectedCalls: number;
     totalMinutes: number;
     totalCreditsUsed: number;
     averageCallDuration: number;
@@ -329,14 +330,16 @@ export class CallModel extends BaseModel<CallInterface> {
 
     const query = `
       SELECT 
-        COUNT(*) as total_calls,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_calls,
-        COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_calls,
-        COALESCE(SUM(duration_minutes), 0) as total_minutes,
-        COALESCE(SUM(credits_used), 0) as total_credits_used,
-        COALESCE(AVG(CASE WHEN status = 'completed' THEN duration_seconds END), 0) / 60.0 as avg_duration
-      FROM calls
-      WHERE user_id = $1 ${dateFilter}
+        COUNT(c.*) as total_calls,
+        COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as completed_calls,
+        COUNT(CASE WHEN c.status = 'failed' THEN 1 END) as failed_calls,
+        COALESCE(SUM(c.duration_minutes), 0) as total_minutes,
+        COALESCE(SUM(c.credits_used), 0) as total_credits_used,
+        COALESCE(AVG(CASE WHEN c.status = 'completed' THEN c.duration_seconds END), 0) / 60.0 as avg_duration,
+        COALESCE(SUM(ct.not_connected), 0) as not_connected_calls
+      FROM calls c
+      LEFT JOIN contacts ct ON c.contact_id = ct.id
+      WHERE c.user_id = $1 ${dateFilter}
     `;
 
     const result = await this.query(query, [userId]);
@@ -346,6 +349,7 @@ export class CallModel extends BaseModel<CallInterface> {
       totalCalls: parseInt(stats.total_calls),
       completedCalls: parseInt(stats.completed_calls),
       failedCalls: parseInt(stats.failed_calls),
+      notConnectedCalls: parseInt(stats.not_connected_calls),
       totalMinutes: parseInt(stats.total_minutes),
       totalCreditsUsed: parseInt(stats.total_credits_used),
       averageCallDuration: parseFloat(stats.avg_duration) || 0
@@ -461,6 +465,217 @@ export class CallModel extends BaseModel<CallInterface> {
     });
 
     return counts;
+  }
+
+  /**
+   * Find filtered calls with database-level filtering, searching, sorting, and pagination
+   */
+  async findFilteredCalls(
+    userId: string,
+    filters: any = {},
+    options: any = {}
+  ): Promise<{ calls: any[]; total: number; hasMore: boolean }> {
+    try {
+      // Build the base query with joins
+      let baseQuery = `
+        FROM calls c
+        LEFT JOIN agents a ON c.agent_id = a.id
+        LEFT JOIN contacts ct ON c.contact_id = ct.id
+        LEFT JOIN lead_analytics la ON c.id = la.call_id
+        WHERE c.user_id = $1
+      `;
+
+      const params: any[] = [userId];
+      let paramIndex = 2;
+
+      // Apply filters
+      if (filters.search && filters.search.trim()) {
+        const searchTerm = `%${filters.search.toLowerCase()}%`;
+        baseQuery += ` AND (
+          LOWER(COALESCE(ct.name, '')) LIKE $${paramIndex} OR
+          LOWER(c.phone_number) LIKE $${paramIndex} OR
+          LOWER(COALESCE(a.name, '')) LIKE $${paramIndex}
+        )`;
+        params.push(searchTerm);
+        paramIndex++;
+      }
+
+      if (filters.status) {
+        baseQuery += ` AND c.status = $${paramIndex}`;
+        params.push(filters.status);
+        paramIndex++;
+      }
+
+      if (filters.agentId) {
+        baseQuery += ` AND c.agent_id = $${paramIndex}`;
+        params.push(filters.agentId);
+        paramIndex++;
+      }
+
+      if (filters.agentName) {
+        baseQuery += ` AND LOWER(a.name) = LOWER($${paramIndex})`;
+        params.push(filters.agentName);
+        paramIndex++;
+      }
+
+      if (filters.phoneNumber) {
+        baseQuery += ` AND c.phone_number LIKE $${paramIndex}`;
+        params.push(`%${filters.phoneNumber}%`);
+        paramIndex++;
+      }
+
+      if (filters.contactName) {
+        baseQuery += ` AND LOWER(COALESCE(ct.name, '')) LIKE $${paramIndex}`;
+        params.push(`%${filters.contactName.toLowerCase()}%`);
+        paramIndex++;
+      }
+
+      if (filters.startDate) {
+        baseQuery += ` AND c.created_at >= $${paramIndex}`;
+        params.push(filters.startDate);
+        paramIndex++;
+      }
+
+      if (filters.endDate) {
+        baseQuery += ` AND c.created_at <= $${paramIndex}`;
+        params.push(filters.endDate);
+        paramIndex++;
+      }
+
+      if (filters.minDurationSeconds !== undefined) {
+        baseQuery += ` AND COALESCE(c.duration_seconds, 0) >= $${paramIndex}`;
+        params.push(filters.minDurationSeconds);
+        paramIndex++;
+      }
+
+      if (filters.maxDurationSeconds !== undefined) {
+        baseQuery += ` AND COALESCE(c.duration_seconds, 0) <= $${paramIndex}`;
+        params.push(filters.maxDurationSeconds);
+        paramIndex++;
+      }
+
+      if (filters.hasTranscript !== undefined) {
+        if (filters.hasTranscript) {
+          baseQuery += ` AND EXISTS (SELECT 1 FROM transcripts t WHERE t.call_id = c.id)`;
+        } else {
+          baseQuery += ` AND NOT EXISTS (SELECT 1 FROM transcripts t WHERE t.call_id = c.id)`;
+        }
+      }
+
+      if (filters.hasAnalytics !== undefined) {
+        if (filters.hasAnalytics) {
+          baseQuery += ` AND la.id IS NOT NULL`;
+        } else {
+          baseQuery += ` AND la.id IS NULL`;
+        }
+      }
+
+      if (filters.minScore !== undefined) {
+        baseQuery += ` AND COALESCE(la.total_score, 0) >= $${paramIndex}`;
+        params.push(filters.minScore);
+        paramIndex++;
+      }
+
+      if (filters.maxScore !== undefined) {
+        baseQuery += ` AND COALESCE(la.total_score, 0) <= $${paramIndex}`;
+        params.push(filters.maxScore);
+        paramIndex++;
+      }
+
+      if (filters.leadStatus) {
+        baseQuery += ` AND la.lead_status_tag = $${paramIndex}`;
+        params.push(filters.leadStatus);
+        paramIndex++;
+      }
+
+      if (filters.leadTag) {
+        // Handle lead tag filtering based on score ranges
+        if (filters.leadTag === 'Hot') {
+          baseQuery += ` AND COALESCE(la.total_score, 0) >= 80`;
+        } else if (filters.leadTag === 'Warm') {
+          baseQuery += ` AND COALESCE(la.total_score, 0) >= 60 AND COALESCE(la.total_score, 0) < 80`;
+        } else if (filters.leadTag === 'Cold') {
+          baseQuery += ` AND COALESCE(la.total_score, 0) < 60`;
+        }
+      }
+
+      // Get total count
+      const countQuery = `SELECT COUNT(c.id) as total ${baseQuery}`;
+      const countResult = await this.query(countQuery, params);
+      const total = parseInt(countResult.rows[0].total);
+
+      // Build the main query with sorting
+      let sortClause = 'ORDER BY c.created_at DESC';
+      if (options.sortBy) {
+        let sortField = options.sortBy;
+        if (sortField === 'contact_name') {
+          sortField = 'ct.name';
+        } else if (sortField === 'total_score') {
+          sortField = 'la.total_score';
+        } else if (sortField === 'duration_seconds') {
+          sortField = 'c.duration_seconds';
+        } else if (sortField === 'phone_number') {
+          sortField = 'c.phone_number';
+        } else {
+          sortField = `c.${sortField}`;
+        }
+        
+        const sortOrder = options.sortOrder || 'DESC';
+        
+        // Handle COALESCE appropriately based on field type
+        if (sortField === 'c.created_at') {
+          // For timestamp fields, don't use COALESCE with 0
+          sortClause = `ORDER BY ${sortField} ${sortOrder}`;
+        } else if (sortField === 'ct.name' || sortField === 'c.phone_number') {
+          // For text fields, use COALESCE with empty string
+          sortClause = `ORDER BY COALESCE(${sortField}, '') ${sortOrder}`;
+        } else {
+          // For numeric fields, use COALESCE with 0
+          sortClause = `ORDER BY COALESCE(${sortField}, 0) ${sortOrder}`;
+        }
+        
+        // Add secondary sort by created_at for consistency
+        if (sortField !== 'c.created_at') {
+          sortClause += ', c.created_at DESC';
+        }
+      }
+
+      // Build final query with pagination
+      const mainQuery = `
+        SELECT 
+          c.*,
+          a.name as agent_name,
+          ct.name as contact_name,
+          la.total_score,
+          la.intent_level,
+          la.urgency_level,
+          la.budget_constraint,
+          la.fit_alignment,
+          la.engagement_health,
+          la.lead_status_tag,
+          la.cta_interactions,
+          EXISTS (SELECT 1 FROM transcripts t WHERE t.call_id = c.id) AS has_transcript
+        ${baseQuery}
+        ${sortClause}
+      `;
+
+      // Add pagination
+      const limit = options.limit || 30;
+      const offset = options.offset || 0;
+      const paginatedQuery = `${mainQuery} LIMIT ${limit} OFFSET ${offset}`;
+
+      const result = await this.query(paginatedQuery, params);
+      const hasMore = offset + limit < total;
+
+      return {
+        calls: result.rows,
+        total,
+        hasMore
+      };
+    } catch (error) {
+      console.error('Error in findFilteredCalls:', error);
+      throw error;
+    }
   }
 }
 

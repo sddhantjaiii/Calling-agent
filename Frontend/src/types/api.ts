@@ -380,8 +380,10 @@ export interface CallFilters {
 export interface CallListOptions {
   limit?: number;
   offset?: number;
-  sortBy?: 'created_at' | 'duration_minutes' | 'total_score' | 'contact_name' | 'phone_number';
+  sortBy?: 'created_at' | 'duration_seconds' | 'duration_minutes' | 'total_score' | 'contact_name' | 'phone_number';
   sortOrder?: 'ASC' | 'DESC';
+  search?: string;
+  agentNames?: string[];
 }
 
 export interface CallSearchOptions {
@@ -415,6 +417,7 @@ export interface CallStatistics {
   totalCalls: number;
   completedCalls: number;
   failedCalls: number;
+  notConnectedCalls: number;
   inProgressCalls: number;
   totalDuration: number;
   averageDuration: number;

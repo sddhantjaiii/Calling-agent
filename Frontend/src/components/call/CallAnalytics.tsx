@@ -28,6 +28,7 @@ import {
   FunnelChart,
   Funnel,
   LabelList,
+  Legend,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme/ThemeProvider";
@@ -242,7 +243,7 @@ const CallAnalytics = ({ selectedAgentId }: CallAnalyticsProps) => {
 
       setAdditionalMetrics([
         {
-          title: "Missed Calls",
+          title: "Not Connected",
           value: "0",
           change: "0%",
           changeValue: "0%",
@@ -501,15 +502,15 @@ const CallAnalytics = ({ selectedAgentId }: CallAnalyticsProps) => {
         );
       case "pie":
         return (
-          <PieChart margin={{ top: 20, right: 20, bottom: 60, left: 20 }}>
+          <PieChart margin={{ top: 12, right: 20, bottom: 56, left: 20 }}>
             <Pie
               data={data}
               cx="50%"
-              cy="45%"
+              cy="57%"
               outerRadius={100}
               dataKey="value"
               label={({ name, value }: { name: string; value: number }) =>
-                `${name} ${value}%`
+                value > 5 ? `${value}%` : ""
               }
             >
               {data.map((entry, index) => (
@@ -520,6 +521,22 @@ const CallAnalytics = ({ selectedAgentId }: CallAnalyticsProps) => {
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              verticalAlign="bottom" 
+              height={0}
+              wrapperStyle={{
+                position: "absolute",
+                bottom: 12,
+                paddingTop: 8,
+                fontSize: 12,
+                lineHeight: 1.2,
+                width: "calc(100% - 40px)",
+                left: 20,
+                textAlign: "center"
+              }}
+              iconSize={8}
+              layout="horizontal"
+            />
           </PieChart>
         );
       default:
@@ -809,7 +826,7 @@ const CallAnalytics = ({ selectedAgentId }: CallAnalyticsProps) => {
           // Map titles to icons
           const getIcon = (title: string) => {
             switch (title) {
-              case "Missed Calls":
+              case "Not Connected":
                 return Info;
               case "Demo Scheduled":
                 return Calendar;
@@ -899,7 +916,7 @@ const CallAnalytics = ({ selectedAgentId }: CallAnalyticsProps) => {
               <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none" />
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={340}>
+          <ResponsiveContainer width="100%" height={320}>
             {renderChart(chartViews.leadQuality, leadQualityData, "value")}
           </ResponsiveContainer>
         </div>
@@ -954,7 +971,7 @@ const CallAnalytics = ({ selectedAgentId }: CallAnalyticsProps) => {
               <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none" />
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={340}>
+          <ResponsiveContainer width="100%" height={320}>
             {renderChart(chartViews.sourceChart, sourceChartData, "value")}
           </ResponsiveContainer>
         </div>

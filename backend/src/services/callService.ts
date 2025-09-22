@@ -5,24 +5,35 @@ import LeadAnalytics, { LeadAnalyticsInterface } from '../models/LeadAnalytics';
 import { logger } from '../utils/logger';
 
 export interface CallSearchFilters {
+  search?: string;
   status?: CallInterface['status'];
   agentId?: string;
+  agentName?: string;
   phoneNumber?: string;
+  contactName?: string;
   startDate?: Date;
   endDate?: Date;
-  minDuration?: number;
-  maxDuration?: number;
+  minDurationSeconds?: number;
+  maxDurationSeconds?: number;
   hasTranscript?: boolean;
   hasAnalytics?: boolean;
   minScore?: number;
+  maxScore?: number;
   leadStatus?: string;
+  leadTag?: string;
 }
 
 export interface CallListOptions {
   limit?: number;
   offset?: number;
-  sortBy?: 'created_at' | 'duration_minutes' | 'total_score';
+  sortBy?: 'created_at' | 'duration_seconds' | 'duration_minutes' | 'total_score' | 'contact_name' | 'phone_number';
   sortOrder?: 'ASC' | 'DESC';
+}
+
+export interface FilteredCallsResult {
+  calls: CallWithDetails[];
+  total: number;
+  hasMore: boolean;
 }
 
 export interface CallWithDetails extends CallInterface {
@@ -226,6 +237,7 @@ export class CallService {
     totalCalls: number;
     completedCalls: number;
     failedCalls: number;
+    notConnectedCalls: number;
     totalMinutes: number;
     totalCreditsUsed: number;
     averageCallDuration: number;
@@ -266,5 +278,27 @@ export class CallService {
     // This method is called by the webhook service
     // The actual processing is handled in webhookService.processCallCompletedWebhook
     logger.info('Call webhook processing delegated to webhook service');
+  }
+
+  /**
+   * Get filtered calls with database-level filtering, searching, sorting, and pagination
+   */
+  static async getFilteredCalls(
+    userId: string,
+    filters: CallSearchFilters,
+    options: CallListOptions
+  ): Promise<FilteredCallsResult> {
+    try {
+      logger.info(`Getting filtered calls for user ${userId} with filters:`, filters);
+      
+      // Use the Call model's new method for database-level filtering
+      const result = await Call.findFilteredCalls(userId, filters, options);
+      
+      logger.info(`Retrieved ${result.calls.length} calls out of ${result.total} total for user ${userId}`);
+      return result;
+    } catch (error) {
+      logger.error('Error fetching filtered calls:', error);
+      throw new Error('Failed to fetch filtered calls');
+    }
   }
 }
