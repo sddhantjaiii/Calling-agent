@@ -181,7 +181,7 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
             </TabsList>
 
             <TabsContent value="unread" className="mt-0">
-              <ScrollArea className="h-[calc(100vh-200px)]">
+              <div className="h-[calc(100vh-200px)] overflow-y-auto smart-notification-scroll pr-4">
                 {unreadNotifications.length === 0 ? (
                   <div className="p-4 text-center text-gray-500">
                     <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -198,11 +198,11 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
                     ))}
                   </div>
                 )}
-              </ScrollArea>
+              </div>
             </TabsContent>
 
             <TabsContent value="all" className="mt-0">
-              <ScrollArea className="h-[calc(100vh-200px)]">
+              <div className="h-[calc(100vh-200px)] overflow-y-auto smart-notification-scroll pr-4">
                 {filteredNotifications.length === 0 ? (
                   <div className="p-4 text-center text-gray-500">
                     <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -219,7 +219,7 @@ export const AdminNotificationCenter: React.FC<AdminNotificationCenterProps> = (
                     ))}
                   </div>
                 )}
-              </ScrollArea>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

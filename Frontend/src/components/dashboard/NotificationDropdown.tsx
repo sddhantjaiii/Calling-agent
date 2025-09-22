@@ -146,7 +146,8 @@ const NotificationDropdown = ({ onNavigateToLeadIntelligence }: NotificationDrop
               </div>
             </div>
 
-            <ScrollArea className="max-h-96">
+            {/* Use fixed height so Radix ScrollArea viewport can calculate size and enable scrolling */}
+            <ScrollArea className="h-96 pr-2 smart-notification-scroll">
               {loading ? (
                 <div className="p-4 text-center text-gray-500">
                   Loading notifications...
