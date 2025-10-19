@@ -51,7 +51,7 @@ COMMENT ON TABLE phone_numbers IS 'Manages phone numbers for batch calling funct
 COMMENT ON COLUMN phone_numbers.id IS 'Primary key UUID';
 COMMENT ON COLUMN phone_numbers.name IS 'Friendly name for the phone number to help admins remember its purpose';
 COMMENT ON COLUMN phone_numbers.phone_number IS 'The actual phone number in standard format';
-COMMENT ON COLUMN phone_numbers.elevenlabs_phone_id IS 'ElevenLabs phone number identifier (e.g., phnum_4401k48bf215e3pv2m8nsfnc25s9)';
+COMMENT ON COLUMN phone_numbers.elevenlabs_phone_id IS 'ElevenLabs phone number identifier (e.g., phnum_7201k7xjteyhfpb9w6f600kbyryj)';
 COMMENT ON COLUMN phone_numbers.assigned_to_user_id IS 'User this phone number is assigned to (NULL means unassigned)';
 COMMENT ON COLUMN phone_numbers.created_by_admin_id IS 'Admin who created this phone number entry';
 COMMENT ON COLUMN phone_numbers.is_active IS 'Whether this phone number is active and available for use';

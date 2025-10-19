@@ -621,7 +621,7 @@ const CreatePhoneNumberDialog: React.FC<CreatePhoneNumberDialogProps> = ({
         <Label htmlFor="create-elevenlabs">ElevenLabs Phone ID *</Label>
         <Input
           id="create-elevenlabs"
-          placeholder="e.g. phnum_4401k48bf215e3pv2m8nsfnc25s9"
+          placeholder="e.g. phnum_7201k7xjteyhfpb9w6f600kbyryj"
           value={formData.elevenlabs_phone_number_id}
           onChange={(e) => setFormData({ ...formData, elevenlabs_phone_number_id: e.target.value })}
         />
@@ -698,7 +698,7 @@ const EditPhoneNumberDialog: React.FC<CreatePhoneNumberDialogProps> = ({
         <Label htmlFor="edit-elevenlabs">ElevenLabs Phone ID *</Label>
         <Input
           id="edit-elevenlabs"
-          placeholder="e.g. phnum_4401k48bf215e3pv2m8nsfnc25s9"
+          placeholder="e.g. phnum_7201k7xjteyhfpb9w6f600kbyryj"
           value={formData.elevenlabs_phone_number_id}
           onChange={(e) => setFormData({ ...formData, elevenlabs_phone_number_id: e.target.value })}
         />

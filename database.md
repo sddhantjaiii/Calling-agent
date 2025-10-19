@@ -151,7 +151,7 @@ The database follows a layered architecture with:
 - `id` (UUID): Primary key, auto-generated
 - `name` (VARCHAR): Friendly name for the phone number to help admins remember its purpose
 - `phone_number` (VARCHAR): The actual phone number in standard format
-- `elevenlabs_phone_number_id` (VARCHAR): ElevenLabs phone number identifier (e.g., phnum_4401k48bf215e3pv2m8nsfnc25s9)
+- `elevenlabs_phone_number_id` (VARCHAR): ElevenLabs phone number identifier (e.g., phnum_7201k7xjteyhfpb9w6f600kbyryj)
 - `assigned_to_user_id` (UUID): Foreign key to users table - user this phone number is assigned to (NULL means unassigned)
 - `created_by_admin_id` (UUID): Foreign key to users table - admin who created this phone number entry
 - `is_active` (BOOLEAN): Whether this phone number is active and available for use (default: true)
